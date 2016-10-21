@@ -119,11 +119,13 @@ class AbstractService(object):
         mongo_collections = {}
 
         for coll, coll_config in mongo_collection_config.items():
-            if coll_config['collection'] not in self.mongo_databases[coll_config['database']].collection_names():
+            if (coll_config['collection'] not in
+                    self.mongo_databases[coll_config['database']].collection_names()):
                 self.logger.error('MONGO - could not find collection ' + coll_config['collection'])
                 raise Exception('could not find collection ' + coll_config['collection'])
 
-            mongo_collections[coll] = self.mongo_databases[coll_config['database']][coll_config['collection']]
+            mongo_collections[coll] = (
+                self.mongo_databases[coll_config['database']][coll_config['collection']])
 
         return mongo_collections
 
