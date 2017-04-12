@@ -42,11 +42,6 @@ class WebMethod(object):
         return response
 
 
-class Config(object):
-    def __init__(self, filename):
-        self.conf = yaml.load(open(filename))
-
-
 class Callback(object):
     def __init__(self, application, uri, sleep_duration=0):
         self.application = application
@@ -85,7 +80,7 @@ class Info(web.RequestHandler):
             ]}
 
     def get(self):
-        self.write(self.application.config.conf)
+        self.write(self.application.conf)
 
 
 class Heartbeat(web.RequestHandler):
@@ -145,8 +140,8 @@ class Todo(web.RequestHandler):
 
         # We get the `todo` task.
         r = self.application.services.tasks.action.put(
-            task=self.application.config.conf['tasks']['todo'],
-            key=self.application.config.conf['tasks']['todo'],
+            task=self.application.conf['tasks']['todo'],
+            key=self.application.conf['tasks']['todo'],
             action='stack',
             data={},
             )
@@ -157,7 +152,7 @@ class Todo(web.RequestHandler):
         while True:
             # Get and self-assign the task.
             r = self.application.services.tasks.assignOne.put(
-                    task=self.application.config.conf['tasks']['todo'])
+                    task=self.application.conf['tasks']['todo'])
             if r.status_code != 200:
                 break
 
@@ -175,7 +170,7 @@ class Todo(web.RequestHandler):
                 for task_key, task_data in todo_tasks:
                     logging.debug('TODO : Set task {}/{}'.format(task_key, task_data))
                     r = self.application.services.tasks.action.put(
-                        task=self.application.config.conf['tasks']['do'],
+                        task=self.application.conf['tasks']['do'],
                         key=escape.url_escape(task_key),
                         action='stack',
                         data=task_data,
@@ -184,16 +179,16 @@ class Todo(web.RequestHandler):
 
                 # Update the task to `done` if nothing happenned since last GET.
                 r = self.application.services.tasks.action.put(
-                    task=self.application.config.conf['tasks']['todo'],
-                    key=self.application.config.conf['tasks']['todo'],
+                    task=self.application.conf['tasks']['todo'],
+                    key=self.application.conf['tasks']['todo'],
                     action='success',
                     data=data,
                     )
             except Exception as e:
                 # Update the task to `done` if nothing happenned since last GET.
                 r = self.application.services.tasks.action.put(
-                    task=self.application.config.conf['tasks']['todo'],
-                    key=self.application.config.conf['tasks']['todo'],
+                    task=self.application.conf['tasks']['todo'],
+                    key=self.application.conf['tasks']['todo'],
                     action='error',
                     data={},
                     )
@@ -243,7 +238,7 @@ class Do(web.RequestHandler):
     def do(self):
         # Get a task and parse it.
         r = self.application.services.tasks.assignOne.put(
-                task=self.application.config.conf['tasks']['do'])
+                task=self.application.conf['tasks']['do'])
         if r.status_code != 200:
             return {'nb': 0, 'code': r.status_code, 'reason': r.reason, 'ok': False}
 
@@ -259,7 +254,7 @@ class Do(web.RequestHandler):
 
             # Set the task as `done`.
             self.application.services.tasks.action.put(
-                task=self.application.config.conf['tasks']['do'],
+                task=self.application.conf['tasks']['do'],
                 key=escape.url_escape(task_key),
                 action='success',
                 data={},
@@ -268,7 +263,7 @@ class Do(web.RequestHandler):
         except Exception as e:
             # Set the task as `fail`.
             self.application.services.tasks.action.put(
-                task=self.application.config.conf['tasks']['do'],
+                task=self.application.conf['tasks']['do'],
                 key=escape.url_escape(task_key),
                 action='error',
                 data={},
@@ -302,7 +297,7 @@ class Swagger(web.RequestHandler):
     def get(self):
         sw = OrderedDict([
             ("swaggerVersion", "1.2"),
-            ("resourcePath", "/{}".format(self.application.config.conf['name'])),
+            ("resourcePath", "/{}".format(self.application.conf['name'])),
             ("basePath", "/api"),
             ("apiVersion", "1.0"),
             ("produces", ["*/*", "application/json"]),
@@ -314,7 +309,7 @@ class Swagger(web.RequestHandler):
             if hasattr(handler, 'swagger'):
                 sw['apis'].append(OrderedDict([
                     ('path', handler.swagger.get('path', "/{name}/{uri}").format(
-                        name=self.application.config.conf['name'],
+                        name=self.application.conf['name'],
                         uri=uri.lstrip('/'))),
                     ('operations', handler.swagger.get('operations', []))
                     ]))
@@ -324,7 +319,7 @@ class Swagger(web.RequestHandler):
 
 class Application(web.Application):
     def __init__(self, config, handlers, **kwargs):
-        self.config = config if isinstance(config, Config) else Config(config)
+        self.conf = config if isinstance(config, dict) else yaml.load(open(config))
         self.handler_list = [
             ("/swagger.json", Swagger),
             ("/swagger", web.RedirectHandler, {'url': '/swagger.json'}),
@@ -335,7 +330,7 @@ class Application(web.Application):
 
         # Create mongo attribute
         self.mongo = Kwargs()
-        _mongo = self.config.conf.get('db', {}).get('mongo', {})
+        _mongo = self.conf.get('db', {}).get('mongo', {})
         self.mongo = Kwargs(**{
             collname: pymongo.MongoClient(host['address'],
                                           connect=False)[db['name']][coll['name']]
@@ -350,24 +345,24 @@ class Application(web.Application):
                 subkey: Kwargs(**{
                     subsubkey: WebMethod(
                         subsubkey,
-                        self.config.conf['registry']['url'].rstrip('/')+subsubval,
+                        self.conf['registry']['url'].rstrip('/')+subsubval,
                         )
                     for subsubkey, subsubval in subval.items()})
                 for subkey, subval in val.items()
                 })
-            for key, val in self.config.conf.get('services', {}).items()})
+            for key, val in self.conf.get('services', {}).items()})
 
     def register(self):
         request = httpclient.HTTPRequest(
             '{}/register/{}'.format(
-                self.config.conf['registry']['url'].rstrip('/'),
-                self.config.conf['name'],
+                self.conf['registry']['url'].rstrip('/'),
+                self.conf['name'],
                 ),
             method='POST',
             body=json.dumps({
                 'url': 'http://{}:{}'.format(socket.gethostname(),
                                              self.get_port()),
-                'config': self.config.conf,
+                'config': self.conf,
                 }),
             )
         client = httpclient.HTTPClient()
@@ -376,17 +371,17 @@ class Application(web.Application):
                 r.code, r.reason[:30]))
 
     def get_port(self):
-        if 'port' not in self.config.conf:
+        if 'port' not in self.conf:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind(("", 0))
-            self.config.conf['port'] = s.getsockname()[1]
+            self.conf['port'] = s.getsockname()[1]
             s.close()
-        return self.config.conf['port']
+        return self.conf['port']
 
     def start_server(self):
         logging.basicConfig(
-            level=self.config.conf['log']['level'],  # Set to 10 for debug.
-            filename=self.config.conf['log']['file'],
+            level=self.conf['log']['level'],  # Set to 10 for debug.
+            filename=self.conf['log']['file'],
             format='%(asctime)s (%(filename)s:%(lineno)s)- %(levelname)s - %(message)s',
             )
         logging.Formatter.converter = time.gmtime
@@ -401,11 +396,11 @@ class Application(web.Application):
             self.register()
             server = httpserver.HTTPServer(self)
             server.bind(self.get_port(), address='0.0.0.0')
-            server.start(self.config.conf['threads_nb'])
+            server.start(self.conf['threads_nb'])
             ioloop.IOLoop.current().start()
         else:
-            if self.config.conf.get('callbacks', None) is not None:
-                for key, val in self.config.conf['callbacks'].items():
+            if self.conf.get('callbacks', None) is not None:
+                for key, val in self.conf['callbacks'].items():
                     if os.fork():
                         if val['threads']:
                             process.fork_processes(val['threads'])
