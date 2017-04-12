@@ -11,7 +11,7 @@ import requests
 import pandas as pd
 from tornado import ioloop, web, httpserver, process, httpclient
 
-from handlers import Info, Heartbeat, Swagger
+from factornado.handlers import Info, Heartbeat, Swagger
 
 
 class Kwargs(object):
