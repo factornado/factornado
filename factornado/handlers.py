@@ -71,6 +71,9 @@ class Todo(web.RequestHandler):
                 }
             ]}
 
+    todo_task = 'todo'
+    do_task = 'do'
+
     def post(self):
         out = self.todo()
         if out['nb'] == 0:
@@ -85,8 +88,8 @@ class Todo(web.RequestHandler):
 
         # We get the `todo` task.
         r = self.application.services.tasks.action.put(
-            task=self.application.config['tasks']['todo'],
-            key=self.application.config['tasks']['todo'],
+            task=self.application.config['tasks'][self.todo_task],
+            key=self.application.config['tasks'][self.todo_task],
             action='stack',
             data={},
             )
@@ -97,7 +100,7 @@ class Todo(web.RequestHandler):
         while True:
             # Get and self-assign the task.
             r = self.application.services.tasks.assignOne.put(
-                    task=self.application.config['tasks']['todo'])
+                    task=self.application.config['tasks'][self.todo_task])
             if r.status_code != 200:
                 break
 
@@ -115,7 +118,7 @@ class Todo(web.RequestHandler):
                 for task_key, task_data in todo_tasks:
                     logging.debug('TODO : Set task {}/{}'.format(task_key, task_data))
                     r = self.application.services.tasks.action.put(
-                        task=self.application.config['tasks']['do'],
+                        task=self.application.config['tasks'][self.do_task],
                         key=escape.url_escape(task_key),
                         action='stack',
                         data=task_data,
@@ -124,16 +127,16 @@ class Todo(web.RequestHandler):
 
                 # Update the task to `done` if nothing happenned since last GET.
                 r = self.application.services.tasks.action.put(
-                    task=self.application.config['tasks']['todo'],
-                    key=self.application.config['tasks']['todo'],
+                    task=self.application.config['tasks'][self.todo_task],
+                    key=self.application.config['tasks'][self.todo_task],
                     action='success',
                     data=data,
                     )
             except Exception as e:
                 # Update the task to `done` if nothing happenned since last GET.
                 r = self.application.services.tasks.action.put(
-                    task=self.application.config['tasks']['todo'],
-                    key=self.application.config['tasks']['todo'],
+                    task=self.application.config['tasks'][self.todo_task],
+                    key=self.application.config['tasks'][self.todo_task],
                     action='error',
                     data={},
                     )
@@ -171,6 +174,8 @@ class Do(web.RequestHandler):
                 }
             ]}
 
+    do_task = 'do'
+
     def post(self):
         out = self.do()
         if out['nb'] == 0:
@@ -183,7 +188,7 @@ class Do(web.RequestHandler):
     def do(self):
         # Get a task and parse it.
         r = self.application.services.tasks.assignOne.put(
-                task=self.application.config['tasks']['do'])
+                task=self.application.config['tasks'][self.do_task])
         if r.status_code != 200:
             return {'nb': 0, 'code': r.status_code, 'reason': r.reason, 'ok': False}
 
@@ -199,7 +204,7 @@ class Do(web.RequestHandler):
 
             # Set the task as `done`.
             self.application.services.tasks.action.put(
-                task=self.application.config['tasks']['do'],
+                task=self.application.config['tasks'][self.do_task],
                 key=escape.url_escape(task_key),
                 action='success',
                 data={},
@@ -208,7 +213,7 @@ class Do(web.RequestHandler):
         except Exception as e:
             # Set the task as `fail`.
             self.application.services.tasks.action.put(
-                task=self.application.config['tasks']['do'],
+                task=self.application.config['tasks'][self.do_task],
                 key=escape.url_escape(task_key),
                 action='error',
                 data={},

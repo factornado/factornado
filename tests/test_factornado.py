@@ -69,11 +69,13 @@ tasks:
     do: someModule-dev
 """))
 
+
 class ToDo(factornado.Todo):
     def todo_loop(self, data):
         for k in range(2):
             data['nb'] += 1
             yield 'ABCDE'[data['nb'] % 5], {}
+
 
 class Do(factornado.Do):
     def do_something(self, task_key, task_data):
@@ -86,9 +88,6 @@ app = factornado.Application(
         ("/do", Do),
         ])
 
-#app.start_server()
 
 def test_true():
     assert True
-
-
