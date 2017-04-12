@@ -61,7 +61,7 @@ class Callback(object):
 
 class Application(web.Application):
     def __init__(self, config, handlers, **kwargs):
-        self.conf = config if isinstance(config, dict) else yaml.load(open(config))
+        self.config = config if isinstance(config, dict) else yaml.load(open(config))
         self.handler_list = [
             ("/swagger.json", Swagger),
             ("/swagger", web.RedirectHandler, {'url': '/swagger.json'}),
@@ -72,7 +72,7 @@ class Application(web.Application):
 
         # Create mongo attribute
         self.mongo = Kwargs()
-        _mongo = self.conf.get('db', {}).get('mongo', {})
+        _mongo = self.config.get('db', {}).get('mongo', {})
         self.mongo = Kwargs(**{
             collname: pymongo.MongoClient(host['address'],
                                           connect=False)[db['name']][coll['name']]
@@ -87,24 +87,24 @@ class Application(web.Application):
                 subkey: Kwargs(**{
                     subsubkey: WebMethod(
                         subsubkey,
-                        self.conf['registry']['url'].rstrip('/')+subsubval,
+                        self.config['registry']['url'].rstrip('/')+subsubval,
                         )
                     for subsubkey, subsubval in subval.items()})
                 for subkey, subval in val.items()
                 })
-            for key, val in self.conf.get('services', {}).items()})
+            for key, val in self.config.get('services', {}).items()})
 
     def register(self):
         request = httpclient.HTTPRequest(
             '{}/register/{}'.format(
-                self.conf['registry']['url'].rstrip('/'),
-                self.conf['name'],
+                self.config['registry']['url'].rstrip('/'),
+                self.config['name'],
                 ),
             method='POST',
             body=json.dumps({
                 'url': 'http://{}:{}'.format(socket.gethostname(),
                                              self.get_port()),
-                'config': self.conf,
+                'config': self.config,
                 }),
             )
         client = httpclient.HTTPClient()
@@ -113,17 +113,17 @@ class Application(web.Application):
                 r.code, r.reason[:30]))
 
     def get_port(self):
-        if 'port' not in self.conf:
+        if 'port' not in self.config:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind(("", 0))
-            self.conf['port'] = s.getsockname()[1]
+            self.config['port'] = s.getsockname()[1]
             s.close()
-        return self.conf['port']
+        return self.config['port']
 
     def start_server(self):
         logging.basicConfig(
-            level=self.conf['log']['level'],  # Set to 10 for debug.
-            filename=self.conf['log']['file'],
+            level=self.config['log']['level'],  # Set to 10 for debug.
+            filename=self.config['log']['file'],
             format='%(asctime)s (%(filename)s:%(lineno)s)- %(levelname)s - %(message)s',
             )
         logging.Formatter.converter = time.gmtime
@@ -138,11 +138,11 @@ class Application(web.Application):
             self.register()
             server = httpserver.HTTPServer(self)
             server.bind(self.get_port(), address='0.0.0.0')
-            server.start(self.conf['threads_nb'])
+            server.start(self.config['threads_nb'])
             ioloop.IOLoop.current().start()
         else:
-            if self.conf.get('callbacks', None) is not None:
-                for key, val in self.conf['callbacks'].items():
+            if self.config.get('callbacks', None) is not None:
+                for key, val in self.config['callbacks'].items():
                     if os.fork():
                         if val['threads']:
                             process.fork_processes(val['threads'])

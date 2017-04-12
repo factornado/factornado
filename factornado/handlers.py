@@ -25,7 +25,7 @@ class Info(web.RequestHandler):
             ]}
 
     def get(self):
-        self.write(self.application.conf)
+        self.write(self.application.config)
 
 
 class Heartbeat(web.RequestHandler):
@@ -85,8 +85,8 @@ class Todo(web.RequestHandler):
 
         # We get the `todo` task.
         r = self.application.services.tasks.action.put(
-            task=self.application.conf['tasks']['todo'],
-            key=self.application.conf['tasks']['todo'],
+            task=self.application.config['tasks']['todo'],
+            key=self.application.config['tasks']['todo'],
             action='stack',
             data={},
             )
@@ -97,7 +97,7 @@ class Todo(web.RequestHandler):
         while True:
             # Get and self-assign the task.
             r = self.application.services.tasks.assignOne.put(
-                    task=self.application.conf['tasks']['todo'])
+                    task=self.application.config['tasks']['todo'])
             if r.status_code != 200:
                 break
 
@@ -115,7 +115,7 @@ class Todo(web.RequestHandler):
                 for task_key, task_data in todo_tasks:
                     logging.debug('TODO : Set task {}/{}'.format(task_key, task_data))
                     r = self.application.services.tasks.action.put(
-                        task=self.application.conf['tasks']['do'],
+                        task=self.application.config['tasks']['do'],
                         key=escape.url_escape(task_key),
                         action='stack',
                         data=task_data,
@@ -124,16 +124,16 @@ class Todo(web.RequestHandler):
 
                 # Update the task to `done` if nothing happenned since last GET.
                 r = self.application.services.tasks.action.put(
-                    task=self.application.conf['tasks']['todo'],
-                    key=self.application.conf['tasks']['todo'],
+                    task=self.application.config['tasks']['todo'],
+                    key=self.application.config['tasks']['todo'],
                     action='success',
                     data=data,
                     )
             except Exception as e:
                 # Update the task to `done` if nothing happenned since last GET.
                 r = self.application.services.tasks.action.put(
-                    task=self.application.conf['tasks']['todo'],
-                    key=self.application.conf['tasks']['todo'],
+                    task=self.application.config['tasks']['todo'],
+                    key=self.application.config['tasks']['todo'],
                     action='error',
                     data={},
                     )
@@ -183,7 +183,7 @@ class Do(web.RequestHandler):
     def do(self):
         # Get a task and parse it.
         r = self.application.services.tasks.assignOne.put(
-                task=self.application.conf['tasks']['do'])
+                task=self.application.config['tasks']['do'])
         if r.status_code != 200:
             return {'nb': 0, 'code': r.status_code, 'reason': r.reason, 'ok': False}
 
@@ -199,7 +199,7 @@ class Do(web.RequestHandler):
 
             # Set the task as `done`.
             self.application.services.tasks.action.put(
-                task=self.application.conf['tasks']['do'],
+                task=self.application.config['tasks']['do'],
                 key=escape.url_escape(task_key),
                 action='success',
                 data={},
@@ -208,7 +208,7 @@ class Do(web.RequestHandler):
         except Exception as e:
             # Set the task as `fail`.
             self.application.services.tasks.action.put(
-                task=self.application.conf['tasks']['do'],
+                task=self.application.config['tasks']['do'],
                 key=escape.url_escape(task_key),
                 action='error',
                 data={},
@@ -242,7 +242,7 @@ class Swagger(web.RequestHandler):
     def get(self):
         sw = OrderedDict([
             ("swaggerVersion", "1.2"),
-            ("resourcePath", "/{}".format(self.application.conf['name'])),
+            ("resourcePath", "/{}".format(self.application.config['name'])),
             ("basePath", "/api"),
             ("apiVersion", "1.0"),
             ("produces", ["*/*", "application/json"]),
@@ -254,7 +254,7 @@ class Swagger(web.RequestHandler):
             if hasattr(handler, 'swagger'):
                 sw['apis'].append(OrderedDict([
                     ('path', handler.swagger.get('path', "/{name}/{uri}").format(
-                        name=self.application.conf['name'],
+                        name=self.application.config['name'],
                         uri=uri.lstrip('/'))),
                     ('operations', handler.swagger.get('operations', []))
                     ]))
