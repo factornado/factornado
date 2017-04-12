@@ -81,6 +81,7 @@ class Do(factornado.Do):
     def do_something(self, task_key, task_data):
         return 'something'
 
+
 app = factornado.Application(
     config,
     [
