@@ -1,3 +1,9 @@
+0.2.0
+~~~~~
+- Application object lets you run a server in a few lines
+- Todo and Do handler let you create periodicTasks in a few lines
+
+
 0.1.0
 ~~~~~
 - A first version
