@@ -45,64 +45,18 @@ class WebMethod(object):
 class Config(object):
     def __init__(self, filename):
         self.conf = yaml.load(open(filename))
-        self.mongo = Kwargs()
-        _mongo = self.conf.get('db', {}).get('mongo', {})
-        self.mongo = Kwargs(**{
-            collname: pymongo.MongoClient(host['address'],
-                                          connect=False)[db['name']][coll['name']]
-            for hostname, host in _mongo.get('host', {}).items()
-            for dbname, db in _mongo.get('database', {}).items() if db['host'] == hostname
-            for collname, coll in _mongo.get('collection', {}).items() if coll['database'] == dbname
-            })
-        self.services = Kwargs(**{
-            key: Kwargs(**{
-                subkey: Kwargs(**{
-                    subsubkey: WebMethod(
-                        subsubkey,
-                        self.conf['registry']['url'].rstrip('/')+subsubval,
-                        )
-                    for subsubkey, subsubval in subval.items()})
-                for subkey, subval in val.items()
-                })
-            for key, val in self.conf.get('services', {}).items()})
-
-    def get_port(self):
-        if 'port' not in self.conf:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind(("", 0))
-            self.conf['port'] = s.getsockname()[1]
-            s.close()
-        return self.conf['port']
-
-    def register(self):
-        request = httpclient.HTTPRequest(
-            '{}/register/{}'.format(
-                self.conf['registry']['url'].rstrip('/'),
-                self.conf['name'],
-                ),
-            method='POST',
-            body=json.dumps({
-                'url': 'http://{}:{}'.format(socket.gethostname(),
-                                             self.get_port()),
-                'config': self.conf,
-                }),
-            )
-        client = httpclient.HTTPClient()
-        r = client.fetch(request, raise_error=False)
-        logging.debug('HEARTBEAT : {} ({}).'.format(
-                r.code, r.reason[:30]))
 
 
 class Callback(object):
-    def __init__(self, config, uri, sleep_duration=0):
-        self.config = config
+    def __init__(self, application, uri, sleep_duration=0):
+        self.application = application
         self.uri = uri
         self.sleep_duration = sleep_duration
 
     def __call__(self):
         logging.debug('{} callback started'.format(self.uri))
         r = requests.post('http://localhost:{}/{}'.format(
-                self.config.get_port(),
+                self.application.get_port(),
                 self.uri.lstrip('/')))
         if r.status_code != 200:
             logging.debug('{} callback returned {}. Sleep for a while.'.format(
@@ -154,7 +108,7 @@ class Heartbeat(web.RequestHandler):
             ]}
 
     def post(self):
-        self.application.config.register()
+        self.application.register()
         self.write("ok")
 
 
@@ -190,7 +144,7 @@ class Todo(web.RequestHandler):
         nb_created_tasks = 0
 
         # We get the `todo` task.
-        r = self.application.config.services.tasks.action.put(
+        r = self.application.services.tasks.action.put(
             task=self.application.config.conf['tasks']['todo'],
             key=self.application.config.conf['tasks']['todo'],
             action='stack',
@@ -202,7 +156,7 @@ class Todo(web.RequestHandler):
 
         while True:
             # Get and self-assign the task.
-            r = self.application.config.services.tasks.assignOne.put(
+            r = self.application.services.tasks.assignOne.put(
                     task=self.application.config.conf['tasks']['todo'])
             if r.status_code != 200:
                 break
@@ -220,7 +174,7 @@ class Todo(web.RequestHandler):
                 logging.debug('TODO : Found {} tasks'.format(len(todo_tasks)))
                 for task_key, task_data in todo_tasks:
                     logging.debug('TODO : Set task {}/{}'.format(task_key, task_data))
-                    r = self.application.config.services.tasks.action.put(
+                    r = self.application.services.tasks.action.put(
                         task=self.application.config.conf['tasks']['do'],
                         key=escape.url_escape(task_key),
                         action='stack',
@@ -229,7 +183,7 @@ class Todo(web.RequestHandler):
                     nb_created_tasks += 1
 
                 # Update the task to `done` if nothing happenned since last GET.
-                r = self.application.config.services.tasks.action.put(
+                r = self.application.services.tasks.action.put(
                     task=self.application.config.conf['tasks']['todo'],
                     key=self.application.config.conf['tasks']['todo'],
                     action='success',
@@ -237,7 +191,7 @@ class Todo(web.RequestHandler):
                     )
             except Exception as e:
                 # Update the task to `done` if nothing happenned since last GET.
-                r = self.application.config.services.tasks.action.put(
+                r = self.application.services.tasks.action.put(
                     task=self.application.config.conf['tasks']['todo'],
                     key=self.application.config.conf['tasks']['todo'],
                     action='error',
@@ -288,7 +242,7 @@ class Do(web.RequestHandler):
 
     def do(self):
         # Get a task and parse it.
-        r = self.application.config.services.tasks.assignOne.put(
+        r = self.application.services.tasks.assignOne.put(
                 task=self.application.config.conf['tasks']['do'])
         if r.status_code != 200:
             return {'nb': 0, 'code': r.status_code, 'reason': r.reason, 'ok': False}
@@ -304,7 +258,7 @@ class Do(web.RequestHandler):
             out = self.do_something(task_key, task_data)
 
             # Set the task as `done`.
-            self.application.config.services.tasks.action.put(
+            self.application.services.tasks.action.put(
                 task=self.application.config.conf['tasks']['do'],
                 key=escape.url_escape(task_key),
                 action='success',
@@ -313,7 +267,7 @@ class Do(web.RequestHandler):
             return {'nb': 1, 'key': task_key, 'ok': True, 'out': out}
         except Exception as e:
             # Set the task as `fail`.
-            self.application.config.services.tasks.action.put(
+            self.application.services.tasks.action.put(
                 task=self.application.config.conf['tasks']['do'],
                 key=escape.url_escape(task_key),
                 action='error',
@@ -379,6 +333,56 @@ class Application(web.Application):
             ] + handlers
         super(Application, self).__init__(self.handler_list, **kwargs)
 
+        # Create mongo attribute
+        self.mongo = Kwargs()
+        _mongo = self.config.conf.get('db', {}).get('mongo', {})
+        self.mongo = Kwargs(**{
+            collname: pymongo.MongoClient(host['address'],
+                                          connect=False)[db['name']][coll['name']]
+            for hostname, host in _mongo.get('host', {}).items()
+            for dbname, db in _mongo.get('database', {}).items() if db['host'] == hostname
+            for collname, coll in _mongo.get('collection', {}).items() if coll['database'] == dbname
+            })
+
+        # Create service attribute
+        self.services = Kwargs(**{
+            key: Kwargs(**{
+                subkey: Kwargs(**{
+                    subsubkey: WebMethod(
+                        subsubkey,
+                        self.config.conf['registry']['url'].rstrip('/')+subsubval,
+                        )
+                    for subsubkey, subsubval in subval.items()})
+                for subkey, subval in val.items()
+                })
+            for key, val in self.config.conf.get('services', {}).items()})
+
+    def register(self):
+        request = httpclient.HTTPRequest(
+            '{}/register/{}'.format(
+                self.config.conf['registry']['url'].rstrip('/'),
+                self.config.conf['name'],
+                ),
+            method='POST',
+            body=json.dumps({
+                'url': 'http://{}:{}'.format(socket.gethostname(),
+                                             self.get_port()),
+                'config': self.config.conf,
+                }),
+            )
+        client = httpclient.HTTPClient()
+        r = client.fetch(request, raise_error=False)
+        logging.debug('HEARTBEAT : {} ({}).'.format(
+                r.code, r.reason[:30]))
+
+    def get_port(self):
+        if 'port' not in self.config.conf:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind(("", 0))
+            self.config.conf['port'] = s.getsockname()[1]
+            s.close()
+        return self.config.conf['port']
+
     def start_server(self):
         logging.basicConfig(
             level=self.config.conf['log']['level'],  # Set to 10 for debug.
@@ -390,13 +394,13 @@ class Application(web.Application):
         logging.getLogger('tornado').setLevel(logging.WARNING)
         logging.info('='*80)
 
-        port = self.config.get_port()  # We need to have a fixed port in both forks.
+        port = self.get_port()  # We need to have a fixed port in both forks.
         logging.info('Listening on port {}'.format(port))
         time.sleep(2)  # We sleep for a few seconds to let the registry start.
         if os.fork():
-            self.config.register()
+            self.register()
             server = httpserver.HTTPServer(self)
-            server.bind(self.config.get_port(), address='0.0.0.0')
+            server.bind(self.get_port(), address='0.0.0.0')
             server.start(self.config.conf['threads_nb'])
             ioloop.IOLoop.current().start()
         else:
@@ -406,7 +410,7 @@ class Application(web.Application):
                         if val['threads']:
                             process.fork_processes(val['threads'])
                             ioloop.PeriodicCallback(
-                                Callback(self.config, val['uri'],
+                                Callback(self, val['uri'],
                                          sleep_duration=val.get('sleep', 0)),
                                 val['period']*1000).start()
                             ioloop.IOLoop.instance().start()
