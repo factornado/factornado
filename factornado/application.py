@@ -29,11 +29,12 @@ class WebMethod(object):
             '\nParameters\n----------\n' +
             '\n'.join(["{} : str".format(x) for x in self.params]))
 
-    def __call__(self, data='', **kwargs):
+    def __call__(self, data='', headers=None, **kwargs):
         response = requests.request(
             method=self.method,
             url=self.url.format(**kwargs),
             data=pd.json.dumps(data),
+            headers=headers if headers is not None else {},
             )
         if not response.ok:
             logging.warning('Error in {} {}'.format(self.method, self.url.format(**kwargs)))
