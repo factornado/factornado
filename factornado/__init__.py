@@ -2,7 +2,7 @@ from factornado.handlers import Todo, Do
 from factornado.application import Application
 
 
-__version__ = '0.2.0'
+__version__ = '0.2.2'
 
 
 if __name__ == '__main__':
