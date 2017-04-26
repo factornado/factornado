@@ -207,7 +207,7 @@ class Do(web.RequestHandler):
                 task=self.application.config['tasks'][self.do_task],
                 key=escape.url_escape(task_key),
                 action='success',
-                data={},
+                data=task_data,
                 )
             return {'nb': 1, 'key': task_key, 'ok': True, 'out': out}
         except Exception as e:
