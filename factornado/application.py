@@ -138,7 +138,7 @@ class Application(web.Application):
         if os.fork():
             self.register()
             server = httpserver.HTTPServer(self)
-            server.bind(self.get_port(), address='0.0.0.0')
+            server.bind(self.get_port(), address=self.config.get('ip', '0.0.0.0'))
             server.start(self.config['threads_nb'])
             ioloop.IOLoop.current().start()
         else:
@@ -152,3 +152,6 @@ class Application(web.Application):
                                          sleep_duration=val.get('sleep', 0)),
                                 val['period']*1000).start()
                             ioloop.IOLoop.instance().start()
+
+    def stop_server(self):
+        ioloop.IOLoop.current().stop()
