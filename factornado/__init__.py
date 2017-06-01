@@ -1,4 +1,4 @@
-from factornado.handlers import Todo, Do
+from factornado.handlers import Todo, Do, RequestHandler
 from factornado.application import Application
 
 

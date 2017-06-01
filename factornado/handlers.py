@@ -4,6 +4,8 @@ from collections import OrderedDict
 
 from tornado import web, escape
 
+RequestHandler = web.RequestHandler
+
 
 class Info(web.RequestHandler):
     swagger = {
