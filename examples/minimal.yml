@@ -1,0 +1,48 @@
+name: someModule-dev
+version: v1
+
+threads_nb: 1
+
+registry:
+    url: http://localhost:8800/
+port: 44044
+log:
+    file: /tmp/someModule.log
+    level: 10
+#callbacks:
+#    heartbeat:
+#        threads: 1
+#        uri: /heartbeat
+#        period: 120
+#    todo:
+#        threads: 1    # Nb of threads
+#        uri: /todo    # The URI to call
+#        period: 10    # The callback period (in sec)
+#        sleep: 10     # If return is not 200, sleep for .... (in sec)
+#    do:
+#        threads: 1    # Nb of threads
+#        uri: /do      # The URI to call
+#        period: 3     # The callback period (in sec)
+#        sleep: 10     # If return is not 200, sleep for .... (in sec)
+#db:
+#    mongo:
+#        host:
+#            host_alias:
+#                address: 'mongodb://localhost:27017'
+#        database:
+#            db_alias:
+#                host: host_alias
+#                name: 'db_name'
+#        collection:
+#            collection_alias:
+#                database: db_alias
+#                name: 'collection_name'
+#services:
+#    tasks:
+#        action:
+#            put: /tasks-v1/action/{task}/{key}/{action}
+#        assignOne:
+#            put: /tasks-v1/assignOne/{task}
+#tasks:
+#    todo: todo-someModule-dev
+#    do: someModule-dev
