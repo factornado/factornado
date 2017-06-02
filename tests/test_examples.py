@@ -5,17 +5,27 @@ import multiprocessing
 from examples import minimal
 
 
-def test_minimal():
-    port = minimal.app.get_port()
-    p = multiprocessing.Process(
-        target=minimal.app.start_server)
-    p.start()
-    try:
+class TestExamples(object):
+    servers = {}
+
+    @classmethod
+    def setup_class(self):
+        """ setup any state specific to the execution of the given module."""
+        self.servers['minimal'] = {'port': minimal.app.get_port()}
+        self.servers['minimal']['process'] = multiprocessing.Process(
+            target=minimal.app.start_server)
+        self.servers['minimal']['process'].start()
         time.sleep(3)
-        r = requests.get('http://127.0.0.1:{port}/hello'.format(port=port))
+
+    @classmethod
+    def teardown_class(self):
+        """ teardown any state that was previously setup with a setup_module
+        method.
+        """
+        self.servers['minimal']['process'].terminate()
+
+    def test_minimal(self):
+        r = requests.get('http://127.0.0.1:{port}/hello'.format(
+                port=self.servers['minimal']['port']))
         r.raise_for_status()
         assert r.text == 'Hello world\n'
-    except:
-        p.terminate()
-        raise
-    p.terminate()
