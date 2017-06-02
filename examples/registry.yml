@@ -1,0 +1,28 @@
+name: registry
+
+port: 8800
+
+threads_nb: 1
+
+registry:
+    url: http://127.0.0.1:8800/
+
+log:
+    file: /tmp/registry.log
+    level: 10
+
+db:
+    mongo:
+        host:
+            localhost:
+                address: 'mongodb://127.0.0.1:27017'
+        database:
+            registry-db:
+                host: localhost
+                # name: registry_database
+                name: test
+        collection:
+            registry_collection:
+                database: registry-db
+                # name: registry_collection
+                name: test_factornado_registry_collection

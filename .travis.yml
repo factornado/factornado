@@ -2,6 +2,9 @@ language: python
 
 sudo: false
 
+services:
+  - mongodb
+
 env:
     - PYTHON="3.4"
     - PYTHON="3.5"

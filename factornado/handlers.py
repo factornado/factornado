@@ -1,8 +1,9 @@
 import json
 import logging
+import socket
 from collections import OrderedDict
 
-from tornado import web, escape
+from tornado import web, escape, httpclient
 
 RequestHandler = web.RequestHandler
 
@@ -49,9 +50,33 @@ class Heartbeat(web.RequestHandler):
                 }
             ]}
 
+    @web.asynchronous
     def post(self):
-        self.application.register()
-        self.write("ok")
+        request = httpclient.HTTPRequest(
+            '{}/register/{}'.format(
+                self.application.config['registry']['url'].rstrip('/'),
+                self.application.config['name'],
+                ),
+            method='POST',
+            body=json.dumps({
+                'url': 'http://{}:{}'.format(socket.gethostname(),
+                                             self.application.get_port()),
+                'config': self.application.config,
+                }),
+            )
+        client = httpclient.AsyncHTTPClient()
+        client.fetch(request, self._on_register_response)
+
+    def _on_register_response(self, response):
+        logging.debug('HEARTBEAT : {} ({}).'.format(
+                response.code, response.reason[:30]))
+
+        if response.error is None:
+            self.write('ok')
+        else:
+            self.write('ko : ({}) {}'.format(
+                    response.code, response.reason))
+        self.finish()
 
 
 class Todo(web.RequestHandler):
