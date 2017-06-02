@@ -1,6 +1,5 @@
 import os
 import time
-import json
 import logging
 import socket
 import yaml
@@ -9,7 +8,7 @@ import re
 import pymongo
 import requests
 import pandas as pd
-from tornado import ioloop, web, httpserver, process, httpclient
+from tornado import ioloop, web, httpserver, process
 
 from factornado.handlers import Info, Heartbeat, Swagger
 
@@ -95,24 +94,6 @@ class Application(web.Application):
                 })
             for key, val in self.config.get('services', {}).items()})
 
-    def register(self):
-        request = httpclient.HTTPRequest(
-            '{}/register/{}'.format(
-                self.config['registry']['url'].rstrip('/'),
-                self.config['name'],
-                ),
-            method='POST',
-            body=json.dumps({
-                'url': 'http://{}:{}'.format(socket.gethostname(),
-                                             self.get_port()),
-                'config': self.config,
-                }),
-            )
-        client = httpclient.HTTPClient()
-        r = client.fetch(request, raise_error=False)
-        logging.debug('HEARTBEAT : {} ({}).'.format(
-                r.code, r.reason[:30]))
-
     def get_port(self):
         if 'port' not in self.config:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -134,14 +115,18 @@ class Application(web.Application):
 
         port = self.get_port()  # We need to have a fixed port in both forks.
         logging.info('Listening on port {}'.format(port))
-        time.sleep(2)  # We sleep for a few seconds to let the registry start.
         if os.fork():
-            self.register()
             server = httpserver.HTTPServer(self)
             server.bind(self.get_port(), address=self.config.get('ip', '0.0.0.0'))
             server.start(self.config['threads_nb'])
             ioloop.IOLoop.current().start()
+        elif os.fork():
+            time.sleep(2)  # We sleep for a few seconds to let the registry start.
+            # Send a heartbeat callback
+            cb = Callback(self, '/heartbeat', sleep_duration=0)
+            cb()
         else:
+            time.sleep(2)  # We sleep for a few seconds to let the registry start.
             if self.config.get('callbacks', None) is not None:
                 for key, val in self.config['callbacks'].items():
                     if os.fork():

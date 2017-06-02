@@ -1,5 +1,5 @@
-name: someModule-dev
-version: v1
+name: minimal
+# version: v1
 
 threads_nb: 1
 
@@ -7,5 +7,5 @@ registry:
     url: http://localhost:8800/
 
 log:
-    file: /tmp/someModule.log
+    file: /tmp/minimal.log
     level: 10

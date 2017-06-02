@@ -17,8 +17,7 @@ If 3742 is the port it's running on.
 
 To end up the process, you can use:
 
->>> kill -SIGTERM 15539
-where "15539" is to be replaced by the pid you got when launching the server.
+>>> kill -SIGTERM -$(ps aux | grep 'python minimal.py' | awk '{print $2}')
 """
 
 import factornado
