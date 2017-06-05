@@ -1,0 +1,48 @@
+name: tasks
+
+threads_nb: 1
+
+registry:
+    url: http://127.0.0.1:8800/
+
+log:
+    file: /tmp/tasks.log
+    level: 10
+
+db:
+    mongo:
+        host:
+            localhost:
+                address: 'mongodb://127.0.0.1:27017'
+        database:
+            tasks-db:
+                host: localhost
+                name: test
+        collection:
+            tasks:
+                database: tasks-db
+                name: test_factornado_tasks_collection
+
+actions:
+    delete:
+        none: none
+        todo: none
+        doing: none
+        toredo: none
+        done: none
+        fail: none
+    stack:
+        none: todo
+        todo: todo
+        doing: toredo
+        toredo: toredo
+        done: todo
+        fail: todo
+    assign:
+        todo: doing
+    success:
+        doing: done
+        toredo: todo
+    error:
+        doing: fail
+        toredo: fail
