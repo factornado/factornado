@@ -2,7 +2,7 @@ import requests
 import time
 import multiprocessing
 
-from examples import minimal, registry
+from examples import minimal, registry, tasks
 
 
 class TestExamples(object):
@@ -12,18 +12,23 @@ class TestExamples(object):
     def setup_class(self):
         """ setup any state specific to the execution of the given module."""
 
-        self.servers['registry'] = {
-            'port': registry.app.get_port(),
-            'process': multiprocessing.Process(target=registry.app.start_server)
+        self.servers = {
+            'registry': {
+                'port': registry.app.get_port(),
+                'process': multiprocessing.Process(target=registry.app.start_server)
+                },
+            'minimal': {
+                'port': minimal.app.get_port(),
+                'process': multiprocessing.Process(target=minimal.app.start_server)
+                },
+            'tasks': {
+                'port': tasks.app.get_port(),
+                'process': multiprocessing.Process(target=tasks.app.start_server)
+                },
             }
 
-        self.servers['minimal'] = {
-            'port': minimal.app.get_port(),
-            'process': multiprocessing.Process(target=minimal.app.start_server)
-            }
-
-        self.servers['registry']['process'].start()
-        self.servers['minimal']['process'].start()
+        for server in self.servers:
+            self.servers[server]['process'].start()
 
         for i in range(30):
             try:
@@ -112,3 +117,162 @@ class TestExamples(object):
         r = requests.get(url + '/minimal/hello')
         r.raise_for_status()
         assert r.text == 'Hello world\n'
+
+    def test_tasks_hello(self):
+        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+        r = requests.get(url)
+        r.raise_for_status()
+        assert r.text == 'This is tasks\n'
+
+        r = requests.get(url + '/')
+        r.raise_for_status()
+        assert r.text == 'This is tasks\n'
+
+    def test_tasks_action_simple(self):
+        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+        r = requests.put(url + '/action/task01/key01/stack', data={})
+        r.raise_for_status()
+        doc = r.json()
+
+        assert 'after' in doc
+        assert 'before' in doc
+        assert doc['after']['key'] == 'key01'
+        assert doc['after']['task'] == 'task01'
+        assert doc['after']['_id'] == 'task01/key01'
+        assert doc['after']['status'] in ['todo', 'toredo']
+
+    def test_tasks_action_priority(self):
+        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+        r = requests.put(url + '/action/task01/key01/stack',
+                         data={},
+                         params={'priority': 1})
+        r.raise_for_status()
+        doc = r.json()
+
+        assert 'after' in doc
+        assert 'before' in doc
+        assert doc['after']['key'] == 'key01'
+        assert doc['after']['task'] == 'task01'
+        assert doc['after']['_id'] == 'task01/key01'
+        assert doc['after']['status'] in ['todo', 'toredo']
+        assert doc['after']['priority'] == 1
+
+    def test_tasks_force_simple(self):
+        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+        r = requests.put(url + '/force/task01/key01/fail', data={})
+        r.raise_for_status()
+        doc = r.json()
+
+        assert 'after' in doc
+        assert 'before' in doc
+        assert doc['after']['key'] == 'key01'
+        assert doc['after']['task'] == 'task01'
+        assert doc['after']['_id'] == 'task01/key01'
+        assert doc['after']['status'] == 'fail'
+
+    def test_tasks_force_priority(self):
+        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+        r = requests.put(url + '/force/task01/key01/toredo',
+                         data={},
+                         params={'priority': 1})
+        r.raise_for_status()
+        doc = r.json()
+
+        assert 'after' in doc
+        assert 'before' in doc
+        assert doc['after']['key'] == 'key01'
+        assert doc['after']['task'] == 'task01'
+        assert doc['after']['_id'] == 'task01/key01'
+        assert doc['after']['status'] == 'toredo'
+        assert doc['after']['priority'] == 1
+
+    def test_tasks_assignOne_simple(self):
+        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+        while True:
+            r = requests.put(url + '/assignOne/task01', data={})
+            r.raise_for_status()
+            if r.status_code != 200:
+                assert r.status_code == 204
+                break
+
+        r = requests.put(url + '/force/task01/key01/todo', data={})
+        r.raise_for_status()
+
+        r = requests.put(url + '/assignOne/task01', data={})
+        r.raise_for_status()
+        assert r.status_code == 200
+        doc = r.json()
+        assert doc['key'] == 'key01'
+        assert doc['task'] == 'task01'
+        assert doc['status'] == 'todo'
+
+    def test_tasks_assignOne_double(self):
+        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+        while True:
+            r = requests.put(url + '/assignOne/task01', data={})
+            r.raise_for_status()
+            if r.status_code != 200:
+                assert r.status_code == 204
+                break
+
+        r = requests.put(url + '/force/task01/key01/todo', data={})
+        r.raise_for_status()
+
+        r = requests.put(url + '/force/task01/key02/todo', data={})
+        r.raise_for_status()
+
+        r = requests.put(url + '/assignOne/task01', data={})
+        r.raise_for_status()
+        assert r.status_code == 200
+        doc = r.json()
+        assert doc['key'] == 'key01'
+        assert doc['task'] == 'task01'
+        assert doc['status'] == 'todo'
+
+        r = requests.put(url + '/assignOne/task01', data={})
+        r.raise_for_status()
+        assert r.status_code == 200
+        doc = r.json()
+        assert doc['key'] == 'key02'
+        assert doc['task'] == 'task01'
+        assert doc['status'] == 'todo'
+
+        r = requests.put(url + '/assignOne/task01', data={})
+        r.raise_for_status()
+        assert r.status_code == 204
+
+    def test_get_by_key(self):
+        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+        r = requests.put(url + '/force/task01/key01/todo', data={})
+        r.raise_for_status()
+
+        r = requests.get(url + '/getByKey/task01/key01')
+        r.raise_for_status()
+        doc = r.json()
+
+        assert doc['task'] == 'task01'
+        assert doc['key'] == 'key01'
+        assert doc['status'] == 'todo'
+
+    def test_get_by_status(self):
+        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+
+        r = requests.put(url + '/force/task01/key01/todo', data={})
+        r.raise_for_status()
+
+        r = requests.put(url + '/force/task01/key02/done', data={})
+        r.raise_for_status()
+
+        r = requests.put(url + '/force/task01/key03/fail', data={})
+        r.raise_for_status()
+
+        r = requests.get(url + '/getByStatus/task01/todo%2Cdone%2Cfail', data={})
+        r.raise_for_status()
+        doc = r.json()
+
+        assert 'done' in doc
+        assert 'fail' in doc
+        assert 'todo' in doc
+        assert 'task01/key01' in [x['_id'] for x in doc['todo']]
+        assert 'task01/key02' in [x['_id'] for x in doc['done']]
+        assert 'task01/key03' in [x['_id'] for x in doc['fail']]
