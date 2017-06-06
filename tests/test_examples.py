@@ -1,8 +1,9 @@
 import requests
 import time
 import multiprocessing
+import pandas as pd
 
-from examples import minimal, registry, tasks
+from examples import minimal, registry, tasks, periodic_task
 
 
 class TestExamples(object):
@@ -25,10 +26,22 @@ class TestExamples(object):
                 'port': tasks.app.get_port(),
                 'process': multiprocessing.Process(target=tasks.app.start_server)
                 },
+            'periodic_task': {
+                'port': periodic_task.app.get_port(),
+                'process': multiprocessing.Process(target=periodic_task.app.start_server)
+                },
             }
 
         for server in self.servers:
             self.servers[server]['process'].start()
+
+        # Reset the database for periodic_task.
+        tasks.app.mongo.tasks.delete_many({})
+
+        periodic_task.app.mongo.periodic.delete_many({})
+        periodic_task.app.mongo.periodic.insert_one(
+                {'dt': pd.Timestamp.utcnow(),
+                 'nb': 0})
 
         for i in range(30):
             try:
@@ -276,3 +289,20 @@ class TestExamples(object):
         assert 'task01/key01' in [x['_id'] for x in doc['todo']]
         assert 'task01/key02' in [x['_id'] for x in doc['done']]
         assert 'task01/key03' in [x['_id'] for x in doc['fail']]
+
+    def test_periodic_task(self):
+        url = 'http://127.0.0.1:{port}'.format(port=self.servers['periodic_task']['port'])
+
+        # We call '/latest' in a loop till at least 3 documents have been created.
+        timeout = pd.Timestamp.utcnow() + pd.Timedelta(60, 's')
+        while True:
+            r = requests.get(url + '/latest')
+            r.raise_for_status()
+            if r.text != 'null':
+                doc = r.json()
+                if doc['nb'] > 3:
+                    break
+                elif pd.Timestamp.utcnow() > timeout:
+                    raise TimeoutError('Timout reached with {} docs only'.format(doc['nb']))
+                print(r.text)
+            time.sleep(1)

@@ -1,0 +1,53 @@
+name: periodictask
+
+threads_nb: 1
+
+registry:
+    url: http://127.0.0.1:8800/
+
+log:
+    file: /tmp/periodic_task.log
+    level: 10
+
+callbacks:
+    heartbeat:
+        threads: 1
+        uri: /heartbeat
+        period: 30
+    todo:
+        threads: 1    # Nb of threads
+        uri: /todo    # The URI to call
+        period: 1     # The callback period (in sec)
+        sleep: 5      # If return is not 200, sleep for .... (in sec)
+    do:
+        threads: 1    # Nb of threads
+        uri: /do      # The URI to call
+        period: 1     # The callback period (in sec)
+        sleep: 3      # If return is not 200, sleep for .... (in sec)
+
+db:
+    mongo:
+        host:
+            localhost:
+                address: 'mongodb://127.0.0.1:27017'
+        database:
+            periodic-db:
+                host: localhost
+                name: test
+        collection:
+            periodic:
+                database: periodic-db
+                name: test_factornado_periodic_task_collection
+
+tasks:
+    todo: periodictask-todo
+    do: periodictask-do
+
+services:
+    tasks:
+        hello:
+            get: /tasks/
+        action:
+            put: /tasks/action/{task}/{key}/{action}
+        assignOne:
+            put: /tasks/assignOne/{task}
