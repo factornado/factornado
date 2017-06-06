@@ -152,7 +152,7 @@ class AssignOne(web.RequestHandler):
                     'status': 'doing',
                     'statusSince': pd.Timestamp.utcnow().value,
                     }})
-            self.write(pd.json.dumps(todo))
+            self.write(pd.io.json.dumps(todo))
 
 
 class GetByKey(web.RequestHandler):
@@ -161,13 +161,13 @@ class GetByKey(web.RequestHandler):
         if todo is None:
             self.set_status(204, reason='No task matching')
         else:
-            self.write(pd.json.dumps(todo))
+            self.write(pd.io.json.dumps(todo))
 
 
 class GetByStatus(web.RequestHandler):
     def get(self, task, status_list):
         status_list = escape.url_unescape(status_list.lower()).split(',')
-        self.write(pd.json.dumps(
+        self.write(pd.io.json.dumps(
             {status: list(self.application.mongo.tasks.find({'status': status,
                                                              'task': task}))
              for status in status_list}))

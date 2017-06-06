@@ -32,7 +32,7 @@ class WebMethod(object):
         response = requests.request(
             method=self.method,
             url=self.url.format(**kwargs),
-            data=pd.json.dumps(data),
+            data=pd.io.json.dumps(data),
             headers=headers if headers is not None else {},
             )
         if not response.ok:

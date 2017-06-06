@@ -8,7 +8,7 @@ import bson
 
 class HelloHandler(web.RequestHandler):
     def get(self):
-        self.write('This is tasks\n')
+        self.write('This is periodic_task\n')
 
 
 class Todo(factornado.Todo):
@@ -47,7 +47,7 @@ class LatestDoc(web.RequestHandler):
         if doc is not None:
             doc['_id'] = hex(int.from_bytes(doc['_id'].binary, 'big'))[2:]
             doc['dt'] = pd.Timestamp(doc['dt']).isoformat()
-        self.write(pd.json.dumps(doc))
+        self.write(pd.io.json.dumps(doc))
 
 
 config = os.path.join(
