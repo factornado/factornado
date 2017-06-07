@@ -1,10 +1,19 @@
-0.2.0
-~~~~~
+0.3
+~~~
+- Several example on how to use factornado
+- Tests based on these examples
+- application.WebMethod allows to pass headers
+- heartbeat reorganized to be asynchronous
+- possibility to stop the server
+- shortcut factornado.RequestHandler to tornado.web.RequestHandler
+
+0.2
+~~~
 - Application object lets you run a server in a few lines
 - Todo and Do handler let you create periodicTasks in a few lines
 
 
-0.1.0
-~~~~~
+0.1
+~~~
 - A first version
 
