@@ -25,6 +25,24 @@ import os
 
 
 class HelloHandler(factornado.handlers.web.RequestHandler):
+    swagger = {
+        "path": "/{name}/{uri}",
+        "operations": [
+            {
+                "notes": "Says hello.",
+                "method": "GET",
+                "responseMessages": [
+                    {"message": "OK", "code": 200},
+                    {"message": "Unauthorized", "code": 401},
+                    {"message": "Forbidden", "code": 403},
+                    {"message": "Not Found", "code": 404}
+                    ],
+                "deprecated": False,
+                "produces": ["application/json"],
+                "parameters": []
+                }
+            ]}
+
     def get(self):
         self.write('Hello world\n')
 

@@ -42,6 +42,24 @@ class Do(factornado.Do):
 
 
 class LatestDoc(web.RequestHandler):
+    swagger = {
+        "path": "/{name}/{uri}",
+        "operations": [
+            {
+                "notes": "Provide the latest doc writtent in the database.",
+                "method": "GET",
+                "responseMessages": [
+                    {"message": "OK", "code": 200},
+                    {"message": "Unauthorized", "code": 401},
+                    {"message": "Forbidden", "code": 403},
+                    {"message": "Not Found", "code": 404}
+                    ],
+                "deprecated": False,
+                "produces": ["application/json"],
+                "parameters": []
+                }
+            ]}
+
     def get(self):
         doc = self.application.mongo.periodic.find_one({}, sort=[('nb', -1)])
         if doc is not None:
