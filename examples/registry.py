@@ -28,6 +28,37 @@ import pandas as pd
 class RegisterHandler(web.RequestHandler):
     """Register a new service."""
 
+    swagger = {
+        "path": "/{name}/{uri}",
+        "operations": [
+            {
+                "notes": "Registers an instance of a service.",
+                "method": "POST",
+                "responseMessages": [
+                    {"message": "OK", "code": 200},
+                    {"message": "Unauthorized", "code": 401},
+                    {"message": "Forbidden", "code": 403},
+                    {"message": "Not Found", "code": 404}
+                    ],
+                "deprecated": False,
+                "produces": ["application/json"],
+                "parameters": []
+                },
+            {
+                "notes": "Lists the instances of a service that have been registered.",
+                "method": "GET",
+                "responseMessages": [
+                    {"message": "OK", "code": 200},
+                    {"message": "Unauthorized", "code": 401},
+                    {"message": "Forbidden", "code": 403},
+                    {"message": "Not Found", "code": 404}
+                    ],
+                "deprecated": False,
+                "produces": ["application/json"],
+                "parameters": []
+                }
+            ]}
+
     def post(self, name=None):
         body = json.loads(self.request.body.decode('utf-8'))
         if 'url' not in body:
@@ -51,13 +82,50 @@ class RegisterHandler(web.RequestHandler):
 
 class GetAllHandler(web.RequestHandler):
     """Get the list of all registered services."""
-    def get(self, param=''):
+
+    swagger = {
+        "path": "/{name}/{uri}",
+        "operations": [
+            {
+                "notes": "Get the list of all registered services.",
+                "method": "GET",
+                "responseMessages": [
+                    {"message": "OK", "code": 200},
+                    {"message": "Unauthorized", "code": 401},
+                    {"message": "Forbidden", "code": 403},
+                    {"message": "Not Found", "code": 404}
+                    ],
+                "deprecated": False,
+                "produces": ["application/json"],
+                "parameters": []
+                }
+            ]}
+
+    def get(self):
         data = pd.DataFrame([{'name': x['name'], 'doc': x}
                              for x in self.application.mongo.registry_collection.find()])
         self.write({name: group['doc'].tolist() for name, group in data.groupby('name')})
 
 
 class ProxyHandler(web.RequestHandler):
+    swagger = {
+        "path": "/{name}/{uri}",
+        "operations": [
+            {
+                "notes": "Proxy a service to one of it's url.",
+                "method": method,
+                "responseMessages": [
+                    {"message": "OK", "code": 200},
+                    {"message": "Unauthorized", "code": 401},
+                    {"message": "Forbidden", "code": 403},
+                    {"message": "Not Found", "code": 404}
+                    ],
+                "deprecated": False,
+                "produces": ["application/json"],
+                "parameters": []
+                } for method in ['GET', 'POST', 'PUT']
+            ]}
+
     @web.asynchronous
     def redirection(self, method, name):
         # Get the service configuration.
@@ -133,6 +201,24 @@ class ProxyHandler(web.RequestHandler):
 
 
 class HelloHandler(web.RequestHandler):
+    swagger = {
+        "path": "/{name}/{uri}",
+        "operations": [
+            {
+                "notes": "Says hello.",
+                "method": "GET",
+                "responseMessages": [
+                    {"message": "OK", "code": 200},
+                    {"message": "Unauthorized", "code": 401},
+                    {"message": "Forbidden", "code": 403},
+                    {"message": "Not Found", "code": 404}
+                    ],
+                "deprecated": False,
+                "produces": ["application/json"],
+                "parameters": []
+                }
+            ]}
+
     def get(self):
         self.write('This is registry\n')
 
