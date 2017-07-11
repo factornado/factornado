@@ -102,6 +102,11 @@ class Application(web.Application):
             s.close()
         return self.config['port']
 
+    def get_host(self):
+        if 'host' not in self.config:
+            self.config['host'] = socket.gethostname()
+        return self.config['host']
+
     def start_server(self):
         logging.basicConfig(
             level=self.config['log']['level'],  # Set to 10 for debug.

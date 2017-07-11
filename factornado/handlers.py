@@ -1,6 +1,5 @@
 import json
 import logging
-import socket
 from collections import OrderedDict
 
 from tornado import web, escape, httpclient
@@ -59,7 +58,7 @@ class Heartbeat(web.RequestHandler):
                 ),
             method='POST',
             body=json.dumps({
-                'url': 'http://{}:{}'.format(socket.gethostname(),
+                'url': 'http://{}:{}'.format(self.application.get_host(),
                                              self.application.get_port()),
                 'config': self.application.config,
                 }),
