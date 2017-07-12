@@ -1,3 +1,10 @@
+0.5
+~~~
+- Method Application.get_host (7e63ec3)
+- Todo.todo_loop has been replaced by Todo.todo_list with different signature (16c684e)
+- New handlers.Log handler is set by default (e0d972d)
+- Callbacks are not only on POST methods (9b2fc96)
+
 0.4
 ~~~
 - Tasks handlers are incorporated into the library (in `factornado.tasks`)
