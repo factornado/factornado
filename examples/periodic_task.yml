@@ -14,16 +14,19 @@ callbacks:
         threads: 1
         uri: /heartbeat
         period: 30
+        method: post
     todo:
         threads: 1    # Nb of threads
         uri: /todo    # The URI to call
         period: 1     # The callback period (in sec)
         sleep: 5      # If return is not 200, sleep for .... (in sec)
+        method: post
     do:
         threads: 1    # Nb of threads
         uri: /do      # The URI to call
         period: 1     # The callback period (in sec)
         sleep: 3      # If return is not 200, sleep for .... (in sec)
+        method: post
 
 db:
     mongo:

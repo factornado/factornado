@@ -42,14 +42,15 @@ class WebMethod(object):
 
 
 class Callback(object):
-    def __init__(self, application, uri, sleep_duration=0):
+    def __init__(self, application, uri, sleep_duration=0, method='post'):
         self.application = application
         self.uri = uri
         self.sleep_duration = sleep_duration
+        self.method = method
 
     def __call__(self):
         logging.debug('{} callback started'.format(self.uri))
-        r = requests.post('http://localhost:{}/{}'.format(
+        r = requests.request(self.method, 'http://localhost:{}/{}'.format(
                 self.application.get_port(),
                 self.uri.lstrip('/')))
         if r.status_code != 200:
@@ -129,7 +130,7 @@ class Application(web.Application):
         elif os.fork():
             time.sleep(2)  # We sleep for a few seconds to let the registry start.
             # Send a heartbeat callback
-            cb = Callback(self, '/heartbeat', sleep_duration=0)
+            cb = Callback(self, '/heartbeat', sleep_duration=0, method='post')
             cb()
         else:
             time.sleep(2)  # We sleep for a few seconds to let the registry start.
@@ -140,7 +141,9 @@ class Application(web.Application):
                             process.fork_processes(val['threads'])
                             ioloop.PeriodicCallback(
                                 Callback(self, val['uri'],
-                                         sleep_duration=val.get('sleep', 0)),
+                                         sleep_duration=val.get('sleep', 0),
+                                         method=val.get('method', 'post'),
+                                         ),
                                 val['period']*1000).start()
                             ioloop.IOLoop.instance().start()
 
