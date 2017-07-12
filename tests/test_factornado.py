@@ -71,10 +71,12 @@ tasks:
 
 
 class ToDo(factornado.Todo):
-    def todo_loop(self, data):
+    def todo_list(self, data):
+        l = []
         for k in range(2):
             data['nb'] += 1
-            yield 'ABCDE'[data['nb'] % 5], {}
+            l.append(('ABCDE'[data['nb'] % 5], {}))
+        return l, data
 
 
 class Do(factornado.Do):
