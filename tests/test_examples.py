@@ -70,6 +70,12 @@ class TestExamples(object):
         r.raise_for_status()
         assert r.text == 'Hello world\n'
 
+    def test_minimal_logs(self):
+        url = 'http://127.0.0.1:{port}'.format(port=self.servers['minimal']['port'])
+        r = requests.get(url + '/log')
+        r.raise_for_status()
+        assert b"================" in r.content
+
     def test_registry_hello(self):
         url = 'http://127.0.0.1:{port}'.format(port=self.servers['registry']['port'])
         r = requests.get(url)

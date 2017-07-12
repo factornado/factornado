@@ -1,6 +1,7 @@
 import json
 import logging
 from collections import OrderedDict
+from subprocess import Popen, PIPE
 
 from tornado import web, escape, httpclient
 
@@ -291,3 +292,44 @@ class Swagger(web.RequestHandler):
                     ]))
 
         self.write(json.dumps(sw, indent=2))
+
+
+class Log(web.RequestHandler):
+    swagger = {
+        "path": "/{name}/{uri}",
+        "operations": [
+            {
+                "notes": "Get the server logs.",
+                "method": "GET",
+                "responseMessages": [
+                    {"message": "OK", "code": 200},
+                    {"message": "Unauthorized", "code": 401},
+                    {"message": "Forbidden", "code": 403},
+                    {"message": "Not Found", "code": 404}
+                    ],
+                "deprecated": False,
+                "produces": ["application/json"],
+                "parameters": [
+                    {
+                        "name": "n",
+                        "type": "integer",
+                        "format": "int32",
+                        "paramType": "query",
+                        "required": False,
+                        "defaultValue": 20,
+                        "description": "The number of lines to retrieve."
+                        }
+                    ]
+                }
+            ]}
+
+    def get(self):
+        n = self.get_argument('n', '20')
+        try:
+            n = int(n)
+        except:
+            raise web.HTTPError(400, 'Argument {} is not an int'.format(n))
+
+        filename = self.application.config['log']['file']
+        tail = Popen(['tail', '-%d' % n, filename], stdout=PIPE).communicate()[0]
+        self.write(tail)
