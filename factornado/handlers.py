@@ -106,7 +106,7 @@ class Todo(web.RequestHandler):
             self.set_status(201)  # Nothing to do.
         self.write(json.dumps(out))
 
-    def todo_loop(self, data):
+    def todo_list(self, data):
         raise NotImplementedError()
 
     def todo(self):
@@ -139,7 +139,7 @@ class Todo(web.RequestHandler):
 
                 # Get all documents after `lastScanObjectId`
                 # #########################################
-                todo_tasks = list(self.todo_loop(data))
+                todo_tasks, data = self.todo_list(data)
                 logging.debug('TODO : Found {} tasks'.format(len(todo_tasks)))
                 for task_key, task_data in todo_tasks:
                     logging.debug('TODO : Set task {}/{}'.format(task_key, task_data))

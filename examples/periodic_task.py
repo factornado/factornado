@@ -12,7 +12,7 @@ class HelloHandler(web.RequestHandler):
 
 
 class Todo(factornado.Todo):
-    def todo_loop(self, data):
+    def todo_list(self, data):
 
         # From data, we get the latest _id read.
         begin = data.get('begin', '0'*24)
@@ -24,12 +24,15 @@ class Todo(factornado.Todo):
             ).limit(2)
 
         # For each one, we create a task.
+        task_list = []
         for doc in cur:
             _id = hex(int.from_bytes(doc.pop('_id').binary, 'big'))[2:]
-            yield _id, doc
+            task_list.append((_id, doc))
 
-            # We update data's begin
-            data['begin'] = _id
+        # We update data's begin
+        data['begin'] = _id
+
+        return task_list, data
 
 
 class Do(factornado.Do):
