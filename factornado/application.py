@@ -10,7 +10,7 @@ import requests
 import pandas as pd
 from tornado import ioloop, web, httpserver, process
 
-from factornado.handlers import Info, Heartbeat, Swagger
+from factornado.handlers import Info, Heartbeat, Swagger, Log
 
 
 class Kwargs(object):
@@ -66,6 +66,7 @@ class Application(web.Application):
             ("/swagger.json", Swagger),
             ("/swagger", web.RedirectHandler, {'url': '/swagger.json'}),
             ("/heartbeat", Heartbeat),
+            ("/log", Log),
             ("/info", Info),
             ] + handlers
         super(Application, self).__init__(self.handler_list, **kwargs)
