@@ -20,7 +20,8 @@ class Kwargs(object):
 
 
 class WebMethod(object):
-    def __init__(self, method, url):
+    def __init__(self, method, url, logger=None):
+        self.logger = logger if logger is not None else logging.root
         self.method = method
         self.url = url
         self.params = re.findall("{(.*?)}", self.url)
@@ -36,7 +37,7 @@ class WebMethod(object):
             headers=headers if headers is not None else {},
             )
         if not response.ok:
-            logging.warning('Error in {} {}'.format(self.method, self.url.format(**kwargs)))
+            self.logger.warning('Error in {} {}'.format(self.method, self.url.format(**kwargs)))
             raise web.HTTPError(response.status_code, response.reason)
         return response
 
@@ -49,19 +50,19 @@ class Callback(object):
         self.method = method
 
     def __call__(self):
-        logging.debug('{} callback started'.format(self.uri))
+        self.application.logger.debug('{} callback started'.format(self.uri))
         r = requests.request(self.method, 'http://localhost:{}/{}'.format(
                 self.application.get_port(),
                 self.uri.lstrip('/')))
         if r.status_code != 200:
-            logging.debug('{} callback returned {}. Sleep for a while.'.format(
+            self.application.logger.debug('{} callback returned {}. Sleep for a while.'.format(
                 self.uri, r.status_code))
             time.sleep(self.sleep_duration)
-        logging.debug('{} callback finished : {}'.format(self.uri, r.text))
+        self.application.logger.debug('{} callback finished : {}'.format(self.uri, r.text))
 
 
 class Application(web.Application):
-    def __init__(self, config, handlers, **kwargs):
+    def __init__(self, config, handlers, logger=None, **kwargs):
         self.config = config if isinstance(config, dict) else yaml.load(open(config))
         self.handler_list = [
             ("/swagger.json", Swagger),
@@ -71,6 +72,20 @@ class Application(web.Application):
             ("/info", Info),
             ] + handlers
         super(Application, self).__init__(self.handler_list, **kwargs)
+
+        # Set logging config
+        if logger is None:
+            logging.basicConfig(
+                level=self.config['log']['level'],  # Set to 10 for debug.
+                filename=self.config['log']['file'],
+                format='%(asctime)s (%(filename)s:%(lineno)s)- %(levelname)s - %(message)s',
+                )
+            logging.Formatter.converter = time.gmtime
+            logging.getLogger('requests').setLevel(logging.WARNING)
+            logging.getLogger('tornado').setLevel(logging.WARNING)
+            self.logger = logging.root
+        else:
+            self.logger = logger
 
         # Create mongo attribute
         self.mongo = Kwargs()
@@ -90,6 +105,7 @@ class Application(web.Application):
                     subsubkey: WebMethod(
                         subsubkey,
                         self.config['registry']['url'].rstrip('/')+subsubval,
+                        logger=self.logger,
                         )
                     for subsubkey, subsubval in subval.items()})
                 for subkey, subval in val.items()
@@ -110,18 +126,10 @@ class Application(web.Application):
         return self.config['host']
 
     def start_server(self):
-        logging.basicConfig(
-            level=self.config['log']['level'],  # Set to 10 for debug.
-            filename=self.config['log']['file'],
-            format='%(asctime)s (%(filename)s:%(lineno)s)- %(levelname)s - %(message)s',
-            )
-        logging.Formatter.converter = time.gmtime
-        logging.getLogger('requests').setLevel(logging.WARNING)
-        logging.getLogger('tornado').setLevel(logging.WARNING)
-        logging.info('='*80)
+        self.logger.info('='*80)
 
         port = self.get_port()  # We need to have a fixed port in both forks.
-        logging.info('Listening on port {}'.format(port))
+        self.logger.info('Listening on port {}'.format(port))
         if os.fork():
             server = httpserver.HTTPServer(self)
             server.bind(self.get_port(), address=self.config.get('ip', '0.0.0.0'))

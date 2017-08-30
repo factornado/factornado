@@ -1,5 +1,4 @@
 import json
-import logging
 from collections import OrderedDict
 from subprocess import Popen, PIPE
 
@@ -68,7 +67,7 @@ class Heartbeat(web.RequestHandler):
         client.fetch(request, self._on_register_response)
 
     def _on_register_response(self, response):
-        logging.debug('HEARTBEAT : {} ({}).'.format(
+        self.application.logger.debug('HEARTBEAT : {} ({}).'.format(
                 response.code, response.reason[:30]))
 
         if response.error is None:
@@ -121,7 +120,7 @@ class Todo(web.RequestHandler):
             data={},
             )
 
-        logging.debug('TODO : Start scanning for new tasks')
+        self.application.logger.debug('TODO : Start scanning for new tasks')
         nb_loops = 0
 
         while True:
@@ -141,9 +140,10 @@ class Todo(web.RequestHandler):
                 # Get all documents after `lastScanObjectId`
                 # #########################################
                 todo_tasks, data = self.todo_list(data)
-                logging.debug('TODO : Found {} tasks'.format(len(todo_tasks)))
+                self.application.logger.debug('TODO : Found {} tasks'.format(len(todo_tasks)))
                 for task_key, task_data in todo_tasks:
-                    logging.debug('TODO : Set task {}/{}'.format(task_key, task_data))
+                    self.application.logger.debug('TODO : Set task {}/{}'.format(task_key,
+                                                                                 task_data))
                     r = self.application.services.tasks.action.put(
                         task=self.application.config['tasks'][self.do_task],
                         key=escape.url_escape(task_key),
@@ -167,7 +167,7 @@ class Todo(web.RequestHandler):
                     action='error',
                     data={},
                     )
-                logging.exception('TODO : Failed todoing.')
+                self.application.logger.exception('TODO : Failed todoing.')
                 return {'nb': 0, 'ok': False, 'reason': e.__repr__()}
 
             nb_loops += 1
@@ -175,9 +175,9 @@ class Todo(web.RequestHandler):
         log_str = 'TODO : Finished scanning for new tasks. Found {} in {} loops.'.format(
             nb_created_tasks, nb_loops)
         if nb_created_tasks > 0:
-            logging.info(log_str)
+            self.application.logger.info(log_str)
         else:
-            logging.debug(log_str)
+            self.application.logger.debug(log_str)
 
         return {'nb': nb_created_tasks, 'nbLoops': nb_loops}
 
@@ -224,8 +224,8 @@ class Do(web.RequestHandler):
         task_data = task['data']
 
         try:
-            logging.debug('DO : Got task: {}'.format(task_key))
-            logging.debug('DO : Got task data: {}'.format(task_data))
+            self.application.logger.debug('DO : Got task: {}'.format(task_key))
+            self.application.logger.debug('DO : Got task data: {}'.format(task_data))
             # Load the statuses.
             out = self.do_something(task_key, task_data)
 
@@ -245,7 +245,7 @@ class Do(web.RequestHandler):
                 action='error',
                 data={},
                 )
-            logging.exception('DO : Failed doing task {}.'.format(task_key))
+            self.application.logger.exception('DO : Failed doing task {}.'.format(task_key))
             return {'nb': 0, 'key': task_key, 'ok': False, 'reason': e.__repr__()}
 
 
