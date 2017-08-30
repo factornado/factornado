@@ -2,7 +2,7 @@ from factornado.handlers import Todo, Do, RequestHandler
 from factornado.application import Application
 
 
-__version__ = '0.5.0'
+__version__ = '0.5.1'
 
 
 __all__ = [
