@@ -72,7 +72,7 @@ class TestExamples(object):
 
     def test_minimal_logs(self):
         url = 'http://127.0.0.1:{port}'.format(port=self.servers['minimal']['port'])
-        r = requests.get(url + '/log')
+        r = requests.get(url + '/log', params=dict(n=10000))
         r.raise_for_status()
         assert b"================" in r.content
 
