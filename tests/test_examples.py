@@ -4,6 +4,7 @@ import multiprocessing
 import pandas as pd
 
 from examples import minimal, registry, tasks, periodic_task
+import uuid
 
 
 class TestExamples(object):
@@ -295,6 +296,63 @@ class TestExamples(object):
         assert 'task01/key01' in [x['_id'] for x in doc['todo']]
         assert 'task01/key02' in [x['_id'] for x in doc['done']]
         assert 'task01/key03' in [x['_id'] for x in doc['fail']]
+
+    def test_tasks_multithreading(self):
+        server = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+
+        def log_function(thread_id, r, operation):
+            r.raise_for_status()
+            open('mylog.log', 'a').write(' '.join([
+                pd.Timestamp.utcnow().isoformat(),
+                thread_id,
+                operation,
+                str(r.status_code),
+                str(pd.Timedelta(r.elapsed))[-15:],
+                ]) + '\n')
+
+        def process_test(server, n=50):
+            thread_id = uuid.uuid4().hex[:8]
+            for i in range(n):
+                r = requests.put(server + '/action/someTask/someKey/stack')
+                log_function(thread_id, r, 'stack')
+
+                r = requests.put(server + '/assignOne/someTask')
+                log_function(thread_id, r, 'assignOne')
+
+                if r.status_code == 200:
+                    r = requests.put(server + '/action/someTask/someKey/success')
+                    log_function(thread_id, r, 'success')
+
+        # We launch 10 clients that will ask for tasks in the same time.
+        open('mylog.log', 'w').write('')
+        for i in range(10):
+            multiprocessing.Process(target=process_test,
+                                    args=(server,),
+                                    ).start()
+
+        # We wait for the clients to finish their job.
+        for i in range(60):
+            data = list(map(lambda x: x.strip().split(), open('mylog.log').readlines()))
+            data = pd.DataFrame(
+                data,
+                columns=['dt', 'thread', 'action', 'code', 'duration'])
+            data['dt'] = data['dt'].apply(pd.Timestamp)
+            summary = data.groupby([
+                    'thread', 'action', 'code']).apply(len).unstack(0).T.fillna(0).astype(int)
+            time.sleep(1)
+            if 'stack' in summary and summary['stack', '200'].max() == 50:
+                break
+        # Up to there, the task mechanism has run without failures.
+        assert ('stack' in summary and
+                summary['stack', '200'].max() == 50), 'No thread ended his job'
+
+        # Let's test if no task has been assigned twice in the same time.
+        z = data[data.action.isin(['assignOne', 'success']) & (data.code == '200')].set_index('dt')
+        z.sort_index(inplace=True)
+        z['nbDoing'] = (z.action == 'assignOne').cumsum() - (z.action == 'success').cumsum()
+        z['dt'] = (pd.np.diff(z.index.values).astype(int)*1e-9).tolist() + [None]
+        # We check that no task was assigned twice for more than 0.1 sec.
+        assert (z[z.nbDoing > 1]['dt'] < 0.1).all()
 
     def test_periodic_task(self):
         url = 'http://127.0.0.1:{port}'.format(port=self.servers['periodic_task']['port'])

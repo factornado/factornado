@@ -1,6 +1,8 @@
 from tornado import web, escape
 import pandas as pd
 import json
+import bson
+import pymongo
 
 
 class SwaggerPath(str):
@@ -8,6 +10,12 @@ class SwaggerPath(str):
     def format(self, uri, **kwargs):
         return super().format(
             uri=uri.replace("/([^/]*?)", ""), **kwargs)
+
+
+def tansform_bson_id(y):
+    x = {key: val for key, val in y.items()}
+    x['id'] = str(x['id']) if x['id'] is not None else None
+    return x
 
 
 class Action(web.RequestHandler):
@@ -89,48 +97,86 @@ class Action(web.RequestHandler):
                 reason="Action '{}' not understood. Expect {}.".format(
                     action, '|'.join(self.application.config['actions'])))
         _id = '/'.join([task, key])
-        before = self.application.mongo.tasks.find_one({'_id': _id})
-        if before is None:
-            before = {
+
+        while True:
+            before = self.application.mongo.tasks.find_one({'_id': _id})
+            if before is None:
+                before = {
+                    '_id': _id,
+                    'id': None,
+                    'task': task,
+                    'key': key,
+                    'status': 'none',
+                    'data': {},
+                    'statusSince': None,
+                    'try': 0,
+                    'priority': 0,
+                    }
+
+            next_status = self.application.config['actions'][action].get(before['status'])
+            if next_status is None:
+                raise web.HTTPError(
+                    411,
+                    reason="Action '{}' cannot be performed on status '{}'.".format(
+                        action, before['status']))
+            after = {
                 '_id': _id,
+                'id': before['id'],
                 'task': task,
                 'key': key,
-                'status': 'none',
-                'data': {},
-                'statusSince': None,
-                'try': 0,
-                'priority': 0,
+                'status': next_status,
+                'data': dict(before['data'].copy(), **data),
+                'statusSince': (
+                    before['statusSince'] if next_status == before['status']
+                    else pd.Timestamp.utcnow().value),
+                'try': before['try'] + (action == 'error'),
+                'priority': priority if priority is not None else before.get('priority')
                 }
 
-        next_status = self.application.config['actions'][action].get(before['status'])
-        if next_status is None:
-            raise web.HTTPError(
-                411,
-                reason="Action '{}' cannot be performed on status '{}'.".format(
-                    action, before['status']))
-        after = {
-            '_id': _id,
-            'task': task,
-            'key': key,
-            'status': next_status,
-            'data': dict(before['data'].copy(), **data),
-            'statusSince': (
-                before['statusSince'] if next_status == before['status']
-                else pd.Timestamp.utcnow().value),
-            'try': before['try'] + (action == 'error'),
-            'priority': priority if priority is not None else before.get('priority')
-            }
+            changed = (json.dumps(tansform_bson_id(before), sort_keys=True) !=
+                       json.dumps(tansform_bson_id(after), sort_keys=True))
+            if changed:
+                if after['status'] == 'none':
+                    change = self.application.mongo.tasks.delete_one({'_id': _id,
+                                                                      'id': before['id']})
+                    count = change.deleted_count
+                    assert change.raw_result['ok']
+                elif before['status'] == 'none':
+                    self.application.logger.debug('Will insert')
+                    after['id'] = bson.ObjectId()
+                    try:
+                        self.application.mongo.tasks.insert_one(after)
+                        count = 1
+                    except pymongo.errors.DuplicateKeyError:
+                        count = 0
+                else:
+                    after['id'] = bson.ObjectId()
+                    change = self.application.mongo.tasks.replace_one(
+                        {'_id': _id, 'id': before['id']}, after, upsert=False)
+                    count = change.modified_count
+                    assert change.raw_result['ok']
 
-        changed = (json.dumps(before, sort_keys=True) != json.dumps(after, sort_keys=True))
-        if changed:
-            if after['status'] == 'none':
-                change = self.application.mongo.tasks.delete_one({'_id': _id})
+                if count == 0:
+                    # Someone came before
+                    if action == 'assign':
+                        # Cannot assign the task if someone came before.
+                        self.set_status(204, reason='No task to do')
+                    else:
+                        # You can perform the action ; let's try again.
+                        pass
+                else:
+                    # We got the right to write
+                    self.write({
+                            'changed': changed,
+                            'before': tansform_bson_id(before),
+                            'after': tansform_bson_id(after)})
+                    break
             else:
-                change = self.application.mongo.tasks.replace_one(
-                    {'_id': _id}, after, upsert=True)
-            assert change.raw_result['ok']
-
-        self.write({'changed': changed, 'before': before, 'after': after})
+                # We had nothing to write
+                self.write({'changed': changed,
+                            'before': tansform_bson_id(before),
+                            'after': tansform_bson_id(after)})
+                break
 
 
 class Force(web.RequestHandler):
@@ -218,6 +264,7 @@ class Force(web.RequestHandler):
         if before is None:
             before = {
                 '_id': _id,
+                'id': None,
                 'task': task,
                 'key': key,
                 'status': 'none',
@@ -229,6 +276,7 @@ class Force(web.RequestHandler):
 
         after = {
             '_id': _id,
+            'id': before['id'],
             'task': task,
             'key': key,
             'status': status,
@@ -239,17 +287,21 @@ class Force(web.RequestHandler):
             'try': before['try'],
             'priority': priority if priority is not None else before.get('priority')
             }
-        changed = (json.dumps(before, sort_keys=True) != json.dumps(after, sort_keys=True))
+        changed = (json.dumps(tansform_bson_id(before), sort_keys=True) !=
+                   json.dumps(tansform_bson_id(after), sort_keys=True))
 
         if changed:
             if after['status'] == 'none':
                 change = self.application.mongo.tasks.delete_one({'_id': _id})
             else:
+                after['id'] = bson.ObjectId()
                 change = self.application.mongo.tasks.replace_one(
                     {'_id': _id}, after, upsert=True)
             assert change.raw_result['ok']
 
-        self.write({'changed': changed, 'before': before, 'after': after})
+        self.write({'changed': changed,
+                    'before': tansform_bson_id(before),
+                    'after': tansform_bson_id(after)})
 
 
 class AssignOne(web.RequestHandler):
@@ -285,19 +337,38 @@ class AssignOne(web.RequestHandler):
             ]}
 
     def put(self, task):
-        todo = self.application.mongo.tasks.find_one(
-            {'status': 'todo', 'task': task},
-            sort=[('priority', -1), ('ldt', 1)])
-        if todo is None:
-            self.set_status(204, reason='No task to do')
-        else:
-            self.application.mongo.tasks.update_one(
-                {'_id': todo['_id']},
-                {'$set': {
-                    'status': 'doing',
-                    'statusSince': pd.Timestamp.utcnow().value,
-                    }})
-            self.write(pd.io.json.dumps(todo))
+        while True:
+            cursor = self.application.mongo.tasks.find(
+                {'status': 'todo', 'task': task},
+                sort=[('priority', -1), ('ldt', 1)])
+            yielded = 0
+            for todo in cursor:
+                r = self.application.mongo.tasks.update_one(
+                    {'_id': todo['_id'], 'id': todo['id']},
+                    {'$set': {
+                            'status': 'doing',
+                            'statusSince': pd.Timestamp.utcnow().value,
+                            'id': bson.ObjectId(),
+                        }})
+                if r.modified_count == 1:
+                    self.write(pd.io.json.dumps(tansform_bson_id(todo)))
+                    yielded = 1
+                    break
+                else:
+                    # Someone got this one before. Let's try another one
+                    pass
+
+            if yielded == 1:
+                # We got a task. It's finished
+                break
+            elif cursor.retrieved == 0:
+                # There where no task to do.
+                self.set_status(204, reason='No task to do')
+                break
+            else:
+                # There where tasks, but they where all got by someone else.
+                # Let's retry
+                pass
 
 
 class GetByKey(web.RequestHandler):
@@ -348,7 +419,7 @@ class GetByKey(web.RequestHandler):
         if todo is None:
             self.set_status(204, reason='No task matching')
         else:
-            self.write(pd.io.json.dumps(todo))
+            self.write(pd.io.json.dumps(tansform_bson_id(todo)))
 
 
 class GetByStatus(web.RequestHandler):
@@ -396,6 +467,7 @@ class GetByStatus(web.RequestHandler):
     def get(self, task, status_list):
         status_list = escape.url_unescape(status_list.lower()).split(',')
         self.write(pd.io.json.dumps(
-            {status: list(self.application.mongo.tasks.find({'status': status,
-                                                             'task': task}))
+            {status: list(map(tansform_bson_id,
+                              self.application.mongo.tasks.find({'status': status,
+                                                                 'task': task})))
              for status in status_list}))

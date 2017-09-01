@@ -1,6 +1,6 @@
 name: tasks
 
-threads_nb: 1
+threads_nb: 10
 
 registry:
     url: http://127.0.0.1:8800/
