@@ -30,15 +30,18 @@ class WebMethod(object):
             '\n'.join(["{} : str".format(x) for x in self.params]))
 
     def __call__(self, data='', headers=None, **kwargs):
+        url = self.url.format(**kwargs)
         response = requests.request(
             method=self.method,
-            url=self.url.format(**kwargs),
+            url=url,
             data=pd.io.json.dumps(data),
             headers=headers if headers is not None else {},
             )
-        if not response.ok:
-            self.logger.warning('Error in {} {}'.format(self.method, self.url.format(**kwargs)))
-            raise web.HTTPError(response.status_code, response.reason)
+        try:
+            response.raise_for_status()
+        except Exception as e:
+            reason = '{} {} > {}'.format(self.method, url, response.reason)
+            raise web.HTTPError(response.status_code, reason, reason=reason)
         return response
 
 
@@ -51,14 +54,20 @@ class Callback(object):
 
     def __call__(self):
         self.application.logger.debug('{} callback started'.format(self.uri))
-        r = requests.request(self.method, 'http://localhost:{}/{}'.format(
-                self.application.get_port(),
-                self.uri.lstrip('/')))
-        if r.status_code != 200:
+        url = 'http://localhost:{}/{}'.format(self.application.get_port(), self.uri.lstrip('/'))
+        response = requests.request(self.method, url)
+        try:
+            response.raise_for_status()
+        except Exception as e:
+            reason = '{} {} > {}'.format(
+                self.method, url, response.reason)
+            raise web.HTTPError(response.status_code, reason, reason=reason)
+        if response.status_code != 200:
             self.application.logger.debug('{} callback returned {}. Sleep for a while.'.format(
-                self.uri, r.status_code))
+                self.uri, response.status_code))
             time.sleep(self.sleep_duration)
-        self.application.logger.debug('{} callback finished : {}'.format(self.uri, r.text))
+        self.application.logger.debug('{} callback finished : {}'.format(self.uri,
+                                                                         response.text))
 
 
 class Application(web.Application):
