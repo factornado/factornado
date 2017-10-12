@@ -1,3 +1,9 @@
+0.6
+~~~
+
+- Proxy properly service error reason (5e50a20)
+- Avoid multiple task assignment when multithreading tasks example (0d3fa50)
+
 0.5
 ~~~
 - Method Application.get_host (7e63ec3)
