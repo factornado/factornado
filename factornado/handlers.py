@@ -63,8 +63,8 @@ class Heartbeat(web.RequestHandler):
                 'config': self.application.config,
                 }),
             )
-        client = httpclient.AsyncHTTPClient()
-        client.fetch(request, self._on_register_response)
+        self.client = httpclient.AsyncHTTPClient()
+        self.client.fetch(request, self._on_register_response)
 
     def _on_register_response(self, response):
         self.application.logger.debug('HEARTBEAT : {} ({}).'.format(
@@ -75,6 +75,7 @@ class Heartbeat(web.RequestHandler):
         else:
             self.write('ko : ({}) {}'.format(
                     response.code, response.reason))
+        self.client.close()
         self.finish()
 
 
