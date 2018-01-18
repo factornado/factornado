@@ -20,5 +20,5 @@ before_install:
     - conda install --yes --file requirements-dev.txt;
 
 script:
-    - python setup.py test
     - find . -type f -name "*.py" ! -name 'conf.py' | xargs flake8 --max-line-length=100
+    - python setup.py test

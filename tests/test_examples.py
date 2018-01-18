@@ -53,7 +53,7 @@ class TestExamples(object):
                     r = requests.post(url + '/heartbeat')
                     r.raise_for_status()
                     assert r.text == 'ok'
-            except:
+            except Exception:
                 continue
             break
 

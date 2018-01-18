@@ -1,22 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 from setuptools import setup
-from setuptools.command.test import test as TestCommand
 
 rootpath = os.path.abspath(os.path.dirname(__file__))
-
-
-class PyTest(TestCommand):
-    def finalize_options(self):
-        TestCommand.finalize_options(self)
-        self.verbose = True
-
-    def run_tests(self):
-        import pytest
-        errno = pytest.main(self.test_args)
-        sys.exit(errno)
 
 
 def read(*parts):
@@ -73,7 +60,7 @@ config = dict(name='factornado',
                            'Development Status :: 5 - Production/Stable'],
               packages=pkgs,
               package_data=pkg_data,
-              cmdclass=dict(test=PyTest),
+              setup_requires=['pytest-runner', ],
               tests_require=['pytest'],
               license=LICENSE,
               install_requires=install_requires,

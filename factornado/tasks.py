@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from tornado import web, escape
 import pandas as pd
 import json
@@ -79,13 +81,13 @@ class Action(web.RequestHandler):
         if priority is not None:
             try:
                 priority = int(priority)
-            except:
+            except Exception:
                 raise web.HTTPError(409, 'priority argument must be an int')
 
         # Parse data
         try:
             data = escape.json_decode(self.request.body) if len(self.request.body) else {}
-        except:
+        except Exception:
             raise web.HTTPError(
                 501,
                 reason="Bytes `{}...` are not JSON serializable".format(self.request.body[:30]))
@@ -242,13 +244,13 @@ class Force(web.RequestHandler):
         if priority is not None:
             try:
                 priority = int(priority)
-            except:
+            except Exception:
                 raise web.HTTPError(409, 'priority argument must be an int')
 
         # Parse data
         try:
             data = escape.json_decode(self.request.body) if len(self.request.body) else {}
-        except:
+        except Exception:
             raise web.HTTPError(
                 501,
                 reason="Bytes `{}...` are not JSON serializable".format(self.request.body[:30]))

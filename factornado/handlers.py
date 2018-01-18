@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-
 import json
 from collections import OrderedDict
 from subprocess import Popen, PIPE
@@ -406,7 +404,7 @@ class Log(web.RequestHandler):
         n = self.get_argument('n', '20')
         try:
             n = int(n)
-        except:
+        except Exception:
             raise web.HTTPError(400, 'Argument {} is not an int'.format(n))
 
         filename = self.application.config['log']['file']
