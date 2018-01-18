@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import absolute_import
+
 import json
 from collections import OrderedDict
 from subprocess import Popen, PIPE
@@ -6,7 +10,67 @@ import pandas as pd
 
 from tornado import web, escape, httpclient
 
-RequestHandler = web.RequestHandler
+from factornado.utils import ArgParseError, MissingArgError
+
+
+class RequestHandler(web.RequestHandler):
+    _args = []
+    _kwargs = []
+
+    def parse(self):
+        """Parse args and kwargs.
+        See self.parse_args and self.parse_kwargs.
+        """
+        try:
+            args = self.parse_args()
+            kwargs = self.parse_kwargs()
+        except (MissingArgError, ArgParseError) as e:
+            raise web.HTTPError(400, e.__repr__(), reason=e.__repr__())
+        return args, kwargs
+
+    def parse_args(self):
+        """Create a list of arguments required, as specified in self._args.
+        Example:
+            self._args = [
+                ('n', 'int', int),
+                ('day', 'timestamp', to_ts),
+                ])
+        `parse_args(self)` will then return an OrderedDict with keys 'n' and 'day',
+        based on the request arguments.
+        If they were not specified, `MissingArgError` will be raised.
+        If their type is not as expected, `ArgParseError` will be raised.
+        """
+        args = OrderedDict()
+        for arg_name, arg_type, arg_function in self._args:
+            arg = self.get_argument(arg_name, None)
+            if arg is None:
+                raise MissingArgError('Argument "{}" is compulsory'.format(arg_name))
+            try:
+                args[arg_name] = arg_function(arg)
+            except Exception as e:
+                raise ArgParseError('{} "{}" is not a {}.'.format(arg_name, arg, arg_type))
+        return args
+
+    def parse_kwargs(self):
+        """Create a list of optional arguments, as specified in self._kwargs.
+        Example:
+            self._kwargs = [
+                ('n', 'int', int, '12'),
+                ('day', 'timestamp', to_ts, '2017-01-01'),
+                ])
+        `parse_kwargs(self)` will then return an OrderedDict with keys 'n' and 'day',
+        based on the request arguments.
+        If they were not specified, default values will be used (n=12, day=2017-01-01).
+        If their type is not as expected, `ArgParseError` will be raised.
+        """
+        kwargs = OrderedDict()
+        for arg_name, arg_type, arg_function, arg_default in self._kwargs:
+            arg = self.get_argument(arg_name, arg_default)
+            try:
+                kwargs[arg_name] = arg_function(arg)
+            except Exception as e:
+                raise ArgParseError('{} "{}" is not a {}.'.format(arg_name, arg, arg_type))
+        return kwargs
 
 
 class Info(web.RequestHandler):
