@@ -1,6 +1,11 @@
+0.7
+~~~
+- handlers.RequestHandler has now methods to parse args and kwargs (3c28e0f)
+- Todo and Do handlers push errors traceback to tasks server (5c49712)
+- Close properly AsyncHTTPClient in Heartbeat.post (a98317c)
+
 0.6
 ~~~
-
 - Proxy properly service error reason (5e50a20)
 - Avoid multiple task assignment when multithreading tasks example (0d3fa50)
 
