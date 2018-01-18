@@ -1,6 +1,8 @@
 import json
 from collections import OrderedDict
 from subprocess import Popen, PIPE
+import traceback
+import pandas as pd
 
 from tornado import web, escape, httpclient
 
@@ -166,7 +168,13 @@ class Todo(web.RequestHandler):
                     task=self.application.config['tasks'][self.todo_task],
                     key=self.application.config['tasks'][self.todo_task],
                     action='error',
-                    data={},
+                    data={
+                        'lastError': {
+                            'reason': e.__repr__(),
+                            'traceback': traceback.format_exc(),
+                            'datetime': pd.Timestamp(pd.Timestamp.utcnow().value).isoformat(),
+                            }
+                        },
                     )
                 self.application.logger.exception('TODO : Failed todoing.')
                 return {'nb': 0, 'ok': False, 'reason': e.__repr__()}
@@ -244,7 +252,13 @@ class Do(web.RequestHandler):
                 task=self.application.config['tasks'][self.do_task],
                 key=escape.url_escape(task_key),
                 action='error',
-                data={},
+                data={
+                    'lastError': {
+                        'reason': e.__repr__(),
+                        'traceback': traceback.format_exc(),
+                        'datetime': pd.Timestamp(pd.Timestamp.utcnow().value).isoformat(),
+                        }
+                    },
                 )
             self.application.logger.exception('DO : Failed doing task {}.'.format(task_key))
             return {'nb': 0, 'key': task_key, 'ok': False, 'reason': e.__repr__()}
