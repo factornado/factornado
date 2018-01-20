@@ -4,7 +4,7 @@ from factornado.handlers import Todo, Do, RequestHandler
 from factornado.application import Application
 
 
-__version__ = 'master'
+__version__ = '0.7.0'
 
 
 __all__ = [
