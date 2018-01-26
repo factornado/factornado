@@ -8,6 +8,12 @@ registry:
 log:
     file: /tmp/tasks.log
     level: 10
+    stdout: False
+    levels:
+        requests: 30
+        tornado: 30
+        urllib3: 30
+        factornado: 20
 
 db:
     mongo:

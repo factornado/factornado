@@ -9,3 +9,10 @@ registry:
 log:
     file: /tmp/minimal.log
     level: 10
+    format: '%(asctime)s (%(name)s:%(filename)s:%(lineno)s)- %(levelname)s - %(message)s'
+    stdout: True
+    levels:
+        requests: 30
+        tornado: 30
+        urllib3: 30
+        factornado: 20

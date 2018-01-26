@@ -8,6 +8,13 @@ registry:
 log:
     file: /tmp/periodic_task.log
     level: 10
+    format: '%(asctime)s (%(name)s:%(filename)s:%(lineno)s)- %(levelname)s - %(message)s'
+    stdout: False
+    levels:
+        requests: 30
+        tornado: 30
+        urllib3: 30
+        factornado: 20
 
 callbacks:
     heartbeat:
