@@ -13,6 +13,7 @@ import pandas as pd
 from tornado import ioloop, web, httpserver, process
 
 from factornado.handlers import Info, Heartbeat, Swagger, Log
+from factornado.logger import get_logger
 
 factornado_logger = logging.getLogger('factornado')
 
@@ -88,15 +89,7 @@ class Application(web.Application):
 
         # Set logging config
         if logger is None:
-            logging.basicConfig(
-                level=self.config['log']['level'],  # Set to 10 for debug.
-                filename=self.config['log']['file'],
-                format='%(asctime)s (%(filename)s:%(lineno)s)- %(levelname)s - %(message)s',
-                )
-            logging.Formatter.converter = time.gmtime
-            logging.getLogger('requests').setLevel(logging.WARNING)
-            logging.getLogger('tornado').setLevel(logging.WARNING)
-            self.logger = logging.root
+            self.logger = get_logger(**self.config['log'])
         else:
             self.logger = logger
 
