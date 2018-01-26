@@ -14,6 +14,8 @@ from tornado import ioloop, web, httpserver, process
 
 from factornado.handlers import Info, Heartbeat, Swagger, Log
 
+factornado_logger = logging.getLogger('factornado')
+
 
 class Kwargs(object):
     def __init__(self, **kwargs):
@@ -55,7 +57,7 @@ class Callback(object):
         self.method = method
 
     def __call__(self):
-        self.application.logger.debug('{} callback started'.format(self.uri))
+        factornado_logger.debug('{} callback started'.format(self.uri))
         url = 'http://localhost:{}/{}'.format(self.application.get_port(), self.uri.lstrip('/'))
         response = requests.request(self.method, url)
         try:
@@ -65,11 +67,11 @@ class Callback(object):
                 self.method, url, response.reason)
             raise web.HTTPError(response.status_code, reason, reason=reason)
         if response.status_code != 200:
-            self.application.logger.debug('{} callback returned {}. Sleep for a while.'.format(
+            factornado_logger.debug('{} callback returned {}. Sleep for a while.'.format(
                 self.uri, response.status_code))
             time.sleep(self.sleep_duration)
-        self.application.logger.debug('{} callback finished : {}'.format(self.uri,
-                                                                         response.text))
+        factornado_logger.debug('{} callback finished : {}'.format(self.uri,
+                                                                   response.text))
 
 
 class Application(web.Application):
@@ -137,10 +139,10 @@ class Application(web.Application):
         return self.config['host']
 
     def start_server(self):
-        self.logger.info('='*80)
+        factornado_logger.info('='*80)
 
         port = self.get_port()  # We need to have a fixed port in both forks.
-        self.logger.info('Listening on port {}'.format(port))
+        factornado_logger.info('Listening on port {}'.format(port))
         if os.fork():
             server = httpserver.HTTPServer(self)
             server.bind(self.get_port(), address=self.config.get('ip', '0.0.0.0'))

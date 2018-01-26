@@ -5,6 +5,9 @@ import pandas as pd
 import json
 import bson
 import pymongo
+import logging
+
+factornado_logger = logging.getLogger('factornado')
 
 
 class SwaggerPath(str):
@@ -144,7 +147,7 @@ class Action(web.RequestHandler):
                     count = change.deleted_count
                     assert change.raw_result['ok']
                 elif before['status'] == 'none':
-                    self.application.logger.debug('Will insert')
+                    factornado_logger.debug('Will insert')
                     after['id'] = bson.ObjectId()
                     try:
                         self.application.mongo.tasks.insert_one(after)
