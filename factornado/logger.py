@@ -31,7 +31,8 @@ def get_logger(name=None, **kwargs):
     logger = logging.getLogger(name) if name else logging.root
     logger_format = logging.Formatter(kwargs.get(
             'format',
-            '%(asctime)s (%(filename)s:%(lineno)s)- %(levelname)s - %(message)s'))
+            '%(asctime)s (%(name)s:%(filename)s:%(lineno)s)- %(levelname)s - %(message)s',
+            ))
 
     # Eventually remove previously defined handlers
     if kwargs.get('purge_handlers') or (kwargs.get('purge_handlers') is None and name is not None):

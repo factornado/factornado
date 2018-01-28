@@ -2,9 +2,19 @@ import requests
 import time
 import multiprocessing
 import pandas as pd
+from collections import OrderedDict
+# import os
 
+from factornado import get_logger
 from examples import minimal, registry, tasks, periodic_task
 import uuid
+
+open('/tmp/test_examples.log', 'w').write('')
+logger = get_logger(
+    file='/tmp/test_examples.log',
+    level=10,
+    levels={'requests': 30, 'tornado': 30, 'urllib3': 30}
+    )
 
 
 class TestExamples(object):
@@ -14,24 +24,24 @@ class TestExamples(object):
     def setup_class(self):
         """ setup any state specific to the execution of the given module."""
 
-        self.servers = {
-            'registry': {
+        self.servers = OrderedDict([
+            ('registry', {
                 'port': registry.app.get_port(),
                 'process': multiprocessing.Process(target=registry.app.start_server)
-                },
-            'minimal': {
-                'port': minimal.app.get_port(),
-                'process': multiprocessing.Process(target=minimal.app.start_server)
-                },
-            'tasks': {
+                }),
+            ('tasks', {
                 'port': tasks.app.get_port(),
                 'process': multiprocessing.Process(target=tasks.app.start_server)
-                },
-            'periodic_task': {
+                }),
+            ('minimal', {
+                'port': minimal.app.get_port(),
+                'process': multiprocessing.Process(target=minimal.app.start_server)
+                }),
+            ('periodic_task', {
                 'port': periodic_task.app.get_port(),
                 'process': multiprocessing.Process(target=periodic_task.app.start_server)
-                },
-            }
+                }),
+            ])
 
         for server in self.servers:
             self.servers[server]['process'].start()
@@ -62,8 +72,17 @@ class TestExamples(object):
         """ teardown any state that was previously setup with a setup_module
         method.
         """
-        for server in self.servers:
-            self.servers[server]['process'].terminate()
+        logger.debug('{} - {}\n'.format(pd.Timestamp.utcnow(), 'TERMINATING'))
+
+        for server in list(self.servers)[::-1]:
+            logger.debug('{} - {}\n'.format(pd.Timestamp.utcnow(), 'term: {}'.format(server)))
+            try:
+                # os.kill(-self.servers[server]['process'].pid, 15)
+                self.servers[server]['process'].terminate()
+            except ProcessLookupError:
+                pass
+            except Exception:
+                logger.warning('Erorr in stopping ' + server)
 
     def test_minimal(self):
         url = 'http://127.0.0.1:{port}'.format(port=self.servers['minimal']['port'])
