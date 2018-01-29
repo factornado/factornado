@@ -6,11 +6,12 @@ import logging
 import socket
 import yaml
 import re
+import signal
 
 import pymongo
 import requests
 import pandas as pd
-from tornado import ioloop, web, httpserver, process
+from tornado import ioloop, web, httpserver
 
 from factornado.handlers import Info, Heartbeat, Swagger, Log
 from factornado.logger import get_logger
@@ -78,6 +79,7 @@ class Callback(object):
 class Application(web.Application):
     def __init__(self, config, handlers, logger=None, **kwargs):
         self.config = config if isinstance(config, dict) else yaml.load(open(config))
+        self.child_processes = []
         self.handler_list = [
             ("/swagger.json", Swagger),
             ("/swagger", web.RedirectHandler, {'url': '/swagger.json'}),
@@ -131,35 +133,84 @@ class Application(web.Application):
             self.config['host'] = socket.gethostname()
         return self.config['host']
 
+    def run_callback(self, name, uri, period, sleep=0, method='post'):
+        self.logger.debug('Callback {}, pid: {}'.format(name, os.getpid()))
+        self.process_nb += 1
+        time.sleep(2)  # We sleep for a few seconds to let the registry start.
+        ioloop.PeriodicCallback(
+            Callback(self, uri, sleep_duration=sleep, method=method),
+            period * 1000,
+            ).start()
+        signal.signal(signal.SIGINT, self.stop_instance)
+        signal.signal(signal.SIGTERM, self.stop_instance)
+        try:
+            ioloop.IOLoop.instance().start()
+        except Exception:
+            self.logger.warning('An error occurred in a callback loop.')
+            self.stop_server(15, None)
+        return
+
     def start_server(self):
         factornado_logger.info('='*80)
 
         port = self.get_port()  # We need to have a fixed port in both forks.
         factornado_logger.info('Listening on port {}'.format(port))
-        if os.fork():
-            server = httpserver.HTTPServer(self)
-            server.bind(self.get_port(), address=self.config.get('ip', '0.0.0.0'))
-            server.start(self.config['threads_nb'])
-            ioloop.IOLoop.current().start()
-        elif os.fork():
+        self.process_nb = 0
+
+        child_process = os.fork()
+        if child_process:
+            self.child_processes.append(child_process)
+        else:
+            self.logger.debug('First heartbeat, pid: {}'.format(os.getpid()))
+            self.process_nb += 1
             time.sleep(2)  # We sleep for a few seconds to let the registry start.
             # Send a heartbeat callback
             cb = Callback(self, '/heartbeat', sleep_duration=0, method='post')
             cb()
-        else:
-            time.sleep(2)  # We sleep for a few seconds to let the registry start.
-            if self.config.get('callbacks', None) is not None:
-                for key, val in self.config['callbacks'].items():
-                    if os.fork():
-                        if val['threads']:
-                            process.fork_processes(val['threads'])
-                            ioloop.PeriodicCallback(
-                                Callback(self, val['uri'],
-                                         sleep_duration=val.get('sleep', 0),
-                                         method=val.get('method', 'post'),
-                                         ),
-                                val['period']*1000).start()
-                            ioloop.IOLoop.instance().start()
+            return
 
-    def stop_server(self):
+        if self.config.get('callbacks', None) is not None:
+            for key, val in self.config['callbacks'].items():
+                if val['threads']:
+                    for i in range(val['threads']):
+                        child_process = os.fork()
+                        if child_process:
+                            self.child_processes.append(child_process)
+                        else:
+                            self.run_callback(
+                                key,
+                                val['uri'],
+                                val['period'],
+                                sleep=val.get('sleep', 0),
+                                method=val.get('method', 'post'),
+                                )
+                            return
+
+        self.server = httpserver.HTTPServer(self)
+        self.server.bind(self.get_port(), address=self.config.get('ip', '0.0.0.0'))
+        self.logger.debug('Server, pid: {}'.format(os.getpid()))
+        self.logger.debug('Child processes: {}'.format(self.child_processes))
+        self.server.start(self.config['threads_nb'])
+        signal.signal(signal.SIGINT, self.stop_server)
+        signal.signal(signal.SIGTERM, self.stop_server)
+        try:
+            ioloop.IOLoop.current().start()
+        except Exception as e:
+            self.logger.warning('An error occurred in the main loop.')
+            self.stop_server(15, None)
+        return
+
+    def stop_instance(self, sig, frame):
+        self.logger.info(
+            'stopping instance {} due to signal {} ({})'.format(self.process_nb, sig, os.getpid()))
+        ioloop.IOLoop.instance().stop()
+
+    def stop_server(self, sig, frame):
+        self.logger.info('STOPPING SERVER {} DUE TO SIGNAL {}'.format(self.config['name'], sig))
+        for child_process in self.child_processes:
+            try:
+                os.kill(child_process, sig)
+            except ProcessLookupError:
+                pass
+        self.server.stop()
         ioloop.IOLoop.current().stop()

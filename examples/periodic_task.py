@@ -25,6 +25,7 @@ class Todo(factornado.Todo):
 
         # For each one, we create a task.
         task_list = []
+        _id = begin
         for doc in cur:
             _id = hex(int.from_bytes(doc.pop('_id').binary, 'big'))[2:]
             task_list.append((_id, doc))
