@@ -1,3 +1,8 @@
+0.8
+~~~
+- Reorganize processes so that they are all child of main process (853d6e8)
+- Create a `logger` submodule for simpler log configuration (fb2f20e)
+
 0.7
 ~~~
 - handlers.RequestHandler has now methods to parse args and kwargs (3c28e0f)
@@ -39,4 +44,3 @@
 0.1
 ~~~
 - A first version
-
