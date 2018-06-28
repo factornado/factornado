@@ -3,11 +3,13 @@ import time
 import multiprocessing
 import pandas as pd
 from collections import OrderedDict
-# import os
 
 from factornado import get_logger
 from examples import minimal, registry, tasks, periodic_task
 import uuid
+import pytest
+
+multiprocessing.set_start_method('fork')
 
 open('/tmp/test_examples.log', 'w').write('')
 logger = get_logger(
@@ -17,108 +19,74 @@ logger = get_logger(
     )
 
 
-class TestExamples(object):
-    servers = {}
-
-    @classmethod
-    def setup_class(self):
-        """ setup any state specific to the execution of the given module."""
-
-        self.servers = OrderedDict([
-            ('registry', {
-                'port': registry.app.get_port(),
-                'process': multiprocessing.Process(target=registry.app.start_server)
-                }),
-            ('tasks', {
-                'port': tasks.app.get_port(),
-                'process': multiprocessing.Process(target=tasks.app.start_server)
-                }),
-            ('minimal', {
-                'port': minimal.app.get_port(),
-                'process': multiprocessing.Process(target=minimal.app.start_server)
-                }),
-            ('periodic_task', {
-                'port': periodic_task.app.get_port(),
-                'process': multiprocessing.Process(target=periodic_task.app.start_server)
-                }),
+@pytest.fixture(scope="session")
+def server():
+    servers = OrderedDict([
+            ('registry', registry),
+            ('tasks', tasks),
+            ('minimal', minimal),
+            ('periodic_task', periodic_task),
             ])
 
-        for server in self.servers:
-            self.servers[server]['process'].start()
+    tasks.app.mongo.tasks.delete_many({})
+    periodic_task.app.mongo.periodic.delete_many({})
+    periodic_task.app.mongo.periodic.insert_one({'dt': pd.Timestamp.utcnow(), 'nb': 0})
+    for i in range(30):
+        try:
+            time.sleep(2)
+            for key, val in servers.items():
+                logger.debug('Try HEARTBEAT on {} (try {})'.format(key, 1+i))
+                url = 'http://127.0.0.1:{}'.format(registry.app.get_port())
+                if val.app.config['name'] != 'registry':
+                    url += '/{}'.format(val.app.config['name'])
+                r = requests.post(url + '/heartbeat')
+                r.raise_for_status()
+                assert r.text == 'ok'
+                logger.debug('Success HEARTBEAT on {} (try {})'.format(key, 1+i))
+        except Exception:
+            raise
+            continue
+        break
 
-        # Reset the database for periodic_task.
-        tasks.app.mongo.tasks.delete_many({})
+    class s(object):
+        url = 'http://127.0.0.1:{port}'.format(port=registry.app.get_port())
 
-        periodic_task.app.mongo.periodic.delete_many({})
-        periodic_task.app.mongo.periodic.insert_one(
-                {'dt': pd.Timestamp.utcnow(),
-                 'nb': 0})
+    yield s
 
-        for i in range(30):
-            try:
-                time.sleep(2)
-                for server in self.servers:
-                    url = 'http://127.0.0.1:{port}'.format(
-                        port=self.servers[server]['port'])
-                    r = requests.post(url + '/heartbeat')
-                    r.raise_for_status()
-                    assert r.text == 'ok'
-            except Exception:
-                continue
-            break
 
-    @classmethod
-    def teardown_class(self):
-        """ teardown any state that was previously setup with a setup_module
-        method.
-        """
-        logger.debug('{} - {}\n'.format(pd.Timestamp.utcnow(), 'TERMINATING'))
-
-        for server in list(self.servers)[::-1]:
-            logger.debug('{} - {}\n'.format(pd.Timestamp.utcnow(), 'term: {}'.format(server)))
-            try:
-                # os.kill(-self.servers[server]['process'].pid, 15)
-                self.servers[server]['process'].terminate()
-            except ProcessLookupError:
-                pass
-            except Exception:
-                logger.warning('Erorr in stopping ' + server)
-
-    def test_minimal(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['minimal']['port'])
-        r = requests.get(url + '/hello')
+class TestMinimal(object):
+    def test_minimal(self, server):
+        r = requests.get(server.url + '/minimal/hello')
         r.raise_for_status()
         assert r.text == 'Hello world\n'
 
-    def test_minimal_logs(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['minimal']['port'])
-        r = requests.get(url + '/log', params=dict(n=10000))
+    def test_minimal_logs(self, server):
+        r = requests.get(server.url + '/minimal/log', params=dict(n=10000))
         r.raise_for_status()
         assert b"================" in r.content
 
-    def test_registry_hello(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['registry']['port'])
-        r = requests.get(url)
+
+class TestRegistry(object):
+    def test_registry_hello(self, server):
+        r = requests.get(server.url)
         r.raise_for_status()
         assert r.text == 'This is registry\n'
 
-        r = requests.get(url + '/')
+        r = requests.get(server.url + '/')
         r.raise_for_status()
         assert r.text == 'This is registry\n'
 
-    def test_registry_register(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['registry']['port'])
-
+    def test_registry_register(self, server):
         # Register a service named 'foo' at url 'foo_url'
-        r = requests.post(url + '/register/foo', data='{"url": "foo_url"}')
+        r = requests.post(server.url + '/register/foo', data='{"url": "foo_url"}')
         r.raise_for_status()
 
         # Register a service named 'foo' at url 'foo_url_2'
-        r = requests.post(url + '/register/foo', data='{"url": "foo_url_2"}')
+        r = requests.post(server.url + '/register/foo', data='{"url": "foo_url_2"}')
         r.raise_for_status()
 
         # Get urls for service 'foo'
-        r = requests.get(url + '/register/foo')
+        r = requests.get(server.url + '/register/foo')
         r.raise_for_status()
         doc = r.json()
         assert "foo" in doc
@@ -135,41 +103,37 @@ class TestExamples(object):
             former_id = x['id']
 
         # Get urls for all services
-        r = requests.get(url + '/register/all')
+        r = requests.get(server.url + '/register/all')
         r.raise_for_status()
         doc = r.json()
         assert "foo" in doc
         assert len(doc["foo"]) > 1
 
-    def test_registry_heartbeat(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['registry']['port'])
-
+    def test_registry_heartbeat(self, server):
         # This query shall be proxied to 'minimal' through 'registry'
-        r = requests.post(url + '/heartbeat')
+        r = requests.post(server.url + '/heartbeat')
         r.raise_for_status()
         assert r.text == 'ok'
 
-    def test_registry_minimal(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['registry']['port'])
-
+    def test_registry_minimal(self, server):
         # This query shall be proxied to 'minimal' through 'registry'
-        r = requests.get(url + '/minimal/hello')
+        r = requests.get(server.url + '/minimal/hello')
         r.raise_for_status()
         assert r.text == 'Hello world\n'
 
-    def test_tasks_hello(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
-        r = requests.get(url)
+
+class TestTasks(object):
+    def test_tasks_hello(self, server):
+        r = requests.get(server.url + '/tasks')
         r.raise_for_status()
         assert r.text == 'This is tasks\n'
 
-        r = requests.get(url + '/')
+        r = requests.get(server.url + '/tasks/')
         r.raise_for_status()
         assert r.text == 'This is tasks\n'
 
-    def test_tasks_action_simple(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
-        r = requests.put(url + '/action/task01/key01/stack', data={})
+    def test_tasks_action_simple(self, server):
+        r = requests.put(server.url + '/tasks/action/task01/key01/stack', data={})
         r.raise_for_status()
         doc = r.json()
 
@@ -180,11 +144,11 @@ class TestExamples(object):
         assert doc['after']['_id'] == 'task01/key01'
         assert doc['after']['status'] in ['todo', 'toredo']
 
-    def test_tasks_action_priority(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
-        r = requests.put(url + '/action/task01/key01/stack',
-                         data={},
-                         params={'priority': 1})
+    def test_tasks_action_priority(self, server):
+        r = requests.put(
+            server.url + '/tasks/action/task01/key01/stack',
+            data={},
+            params={'priority': 1})
         r.raise_for_status()
         doc = r.json()
 
@@ -196,9 +160,8 @@ class TestExamples(object):
         assert doc['after']['status'] in ['todo', 'toredo']
         assert doc['after']['priority'] == 1
 
-    def test_tasks_force_simple(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
-        r = requests.put(url + '/force/task01/key01/fail', data={})
+    def test_tasks_force_simple(self, server):
+        r = requests.put(server.url + '/tasks/force/task01/key01/fail', data={})
         r.raise_for_status()
         doc = r.json()
 
@@ -209,11 +172,11 @@ class TestExamples(object):
         assert doc['after']['_id'] == 'task01/key01'
         assert doc['after']['status'] == 'fail'
 
-    def test_tasks_force_priority(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
-        r = requests.put(url + '/force/task01/key01/toredo',
-                         data={},
-                         params={'priority': 1})
+    def test_tasks_force_priority(self, server):
+        r = requests.put(
+            server.url + '/tasks/force/task01/key01/toredo',
+            data={},
+            params={'priority': 1})
         r.raise_for_status()
         doc = r.json()
 
@@ -225,19 +188,18 @@ class TestExamples(object):
         assert doc['after']['status'] == 'toredo'
         assert doc['after']['priority'] == 1
 
-    def test_tasks_assignOne_simple(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+    def test_tasks_assignOne_simple(self, server):
         while True:
-            r = requests.put(url + '/assignOne/task01', data={})
+            r = requests.put(server.url + '/tasks/assignOne/task01', data={})
             r.raise_for_status()
             if r.status_code != 200:
                 assert r.status_code == 204
                 break
 
-        r = requests.put(url + '/force/task01/key01/todo', data={})
+        r = requests.put(server.url + '/tasks/force/task01/key01/todo', data={})
         r.raise_for_status()
 
-        r = requests.put(url + '/assignOne/task01', data={})
+        r = requests.put(server.url + '/tasks/assignOne/task01', data={})
         r.raise_for_status()
         assert r.status_code == 200
         doc = r.json()
@@ -245,22 +207,21 @@ class TestExamples(object):
         assert doc['task'] == 'task01'
         assert doc['status'] == 'todo'
 
-    def test_tasks_assignOne_double(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
+    def test_tasks_assignOne_double(self, server):
         while True:
-            r = requests.put(url + '/assignOne/task01', data={})
+            r = requests.put(server.url + '/tasks/assignOne/task01', data={})
             r.raise_for_status()
             if r.status_code != 200:
                 assert r.status_code == 204
                 break
 
-        r = requests.put(url + '/force/task01/key01/todo', data={})
+        r = requests.put(server.url + '/tasks/force/task01/key01/todo', data={})
         r.raise_for_status()
 
-        r = requests.put(url + '/force/task01/key02/todo', data={})
+        r = requests.put(server.url + '/tasks/force/task01/key02/todo', data={})
         r.raise_for_status()
 
-        r = requests.put(url + '/assignOne/task01', data={})
+        r = requests.put(server.url + '/tasks/assignOne/task01', data={})
         r.raise_for_status()
         assert r.status_code == 200
         doc = r.json()
@@ -268,7 +229,7 @@ class TestExamples(object):
         assert doc['task'] == 'task01'
         assert doc['status'] == 'todo'
 
-        r = requests.put(url + '/assignOne/task01', data={})
+        r = requests.put(server.url + '/tasks/assignOne/task01', data={})
         r.raise_for_status()
         assert r.status_code == 200
         doc = r.json()
@@ -276,16 +237,15 @@ class TestExamples(object):
         assert doc['task'] == 'task01'
         assert doc['status'] == 'todo'
 
-        r = requests.put(url + '/assignOne/task01', data={})
+        r = requests.put(server.url + '/tasks/assignOne/task01', data={})
         r.raise_for_status()
         assert r.status_code == 204
 
-    def test_get_by_key(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
-        r = requests.put(url + '/force/task01/key01/todo', data={})
+    def test_get_by_key(self, server):
+        r = requests.put(server.url + '/tasks/force/task01/key01/todo', data={})
         r.raise_for_status()
 
-        r = requests.get(url + '/getByKey/task01/key01')
+        r = requests.get(server.url + '/tasks/getByKey/task01/key01')
         r.raise_for_status()
         doc = r.json()
 
@@ -293,19 +253,17 @@ class TestExamples(object):
         assert doc['key'] == 'key01'
         assert doc['status'] == 'todo'
 
-    def test_get_by_status(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
-
-        r = requests.put(url + '/force/task01/key01/todo', data={})
+    def test_get_by_status(self, server):
+        r = requests.put(server.url + '/tasks/force/task01/key01/todo', data={})
         r.raise_for_status()
 
-        r = requests.put(url + '/force/task01/key02/done', data={})
+        r = requests.put(server.url + '/tasks/force/task01/key02/done', data={})
         r.raise_for_status()
 
-        r = requests.put(url + '/force/task01/key03/fail', data={})
+        r = requests.put(server.url + '/tasks/force/task01/key03/fail', data={})
         r.raise_for_status()
 
-        r = requests.get(url + '/getByStatus/task01/todo%2Cdone%2Cfail', data={})
+        r = requests.get(server.url + '/tasks/getByStatus/task01/todo%2Cdone%2Cfail', data={})
         r.raise_for_status()
         doc = r.json()
 
@@ -316,9 +274,7 @@ class TestExamples(object):
         assert 'task01/key02' in [x['_id'] for x in doc['done']]
         assert 'task01/key03' in [x['_id'] for x in doc['fail']]
 
-    def test_tasks_multithreading(self):
-        server = 'http://127.0.0.1:{port}'.format(port=self.servers['tasks']['port'])
-
+    def test_tasks_multithreading(self, server):
         def log_function(thread_id, r, operation):
             r.raise_for_status()
             open('mylog.log', 'a').write(' '.join([
@@ -346,7 +302,7 @@ class TestExamples(object):
         open('mylog.log', 'w').write('')
         for i in range(10):
             multiprocessing.Process(target=process_test,
-                                    args=(server,),
+                                    args=(server.url + '/tasks',),
                                     ).start()
 
         # We wait for the clients to finish their job.
@@ -373,13 +329,13 @@ class TestExamples(object):
         # We check that no task was assigned twice for more than 0.1 sec.
         assert (z[z.nbDoing > 1]['dt'] < 0.1).all()
 
-    def test_periodic_task(self):
-        url = 'http://127.0.0.1:{port}'.format(port=self.servers['periodic_task']['port'])
 
+class TestPeriodicTask(object):
+    def test_periodic_task(self, server):
         # We call '/latest' in a loop till at least 3 documents have been created.
         timeout = pd.Timestamp.utcnow() + pd.Timedelta(60, 's')
         while True:
-            r = requests.get(url + '/latest')
+            r = requests.get(server.url + '/periodictask/latest')
             r.raise_for_status()
             if r.text != 'null':
                 doc = r.json()
