@@ -40,7 +40,7 @@ class WebMethod(object):
         response = requests.request(
             method=self.method,
             url=url,
-            data=pd.io.json.dumps(data),
+            data=data if isinstance(data, (str, bytes, type(None))) else pd.io.json.dumps(data),
             headers=headers if headers is not None else {},
             )
         try:
