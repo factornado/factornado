@@ -15,7 +15,6 @@ def authenticated(handler_class):
         class MainHandler(factornado.RequestHandler):
             def get(self):
                 self.write('Only authenticated')
-    
     """
     def wrap_execute(handler_execute):
         def _execute(self, transforms, *args, **kwargs):
@@ -30,8 +29,8 @@ def authenticated(handler_class):
 
 
 def roles(roles=None):
-    """ Function decorator to check user role and allow access 
-    Combinate with the authentication decorator, 
+    """ Function decorator to check user role and allow access
+    Combinate with the authentication decorator,
     this decorator can be used on method like the following sample:
         @authenticated
         class MainHandler(factornado.RequestHandler):
@@ -86,9 +85,9 @@ def _check_auth(handler, kwargs):
         if response.code == 200:
             jwk = json.loads(response.body.decode('utf-8'))
             public_key = RSAAlgorithm.from_jwk(json.dumps(jwk['keys'][0]))
-            auth_data = jwt.decode(bearer, 
-                                   public_key, 
-                                   algorithms='RS256', 
+            auth_data = jwt.decode(bearer,
+                                   public_key,
+                                   algorithms='RS256',
                                    options={'verify_aud': False})
             httpclient.HTTPClient().close()
         else:
