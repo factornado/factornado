@@ -116,8 +116,7 @@ class Heartbeat(web.RequestHandler):
                 }
             ]}
 
-    @web.asynchronous
-    def post(self):
+    async def post(self):
         request = httpclient.HTTPRequest(
             '{}/register/{}'.format(
                 self.application.config['registry']['url'].rstrip('/'),
@@ -131,9 +130,8 @@ class Heartbeat(web.RequestHandler):
                 }),
             )
         self.client = httpclient.AsyncHTTPClient()
-        self.client.fetch(request, self._on_register_response)
+        response = await self.client.fetch(request)
 
-    def _on_register_response(self, response):
         factornado_logger.debug('HEARTBEAT : {} ({}).'.format(
                 response.code, response.reason[:30]))
 
@@ -143,7 +141,6 @@ class Heartbeat(web.RequestHandler):
             self.write('ko : ({}) {}'.format(
                     response.code, response.reason))
         self.client.close()
-        self.finish()
 
 
 class Todo(web.RequestHandler):

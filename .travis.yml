@@ -8,6 +8,7 @@ services:
 env:
     - PYTHON="3.5"
     - PYTHON="3.6"
+    - PYTHON="3.7"
 
 before_install:
     - wget http://bit.ly/miniconda -O miniconda.sh
