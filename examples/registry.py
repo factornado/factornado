@@ -126,7 +126,6 @@ class ProxyHandler(web.RequestHandler):
                 } for method in ['GET', 'POST', 'PUT']
             ]}
 
-    @web.asynchronous
     def redirection(self, method, name):
         # Get the service configuration.
         query = {'name': name}
@@ -166,24 +165,23 @@ class ProxyHandler(web.RequestHandler):
             request_timeout=300.,
             validate_cert=False,
             )
-        httpclient.AsyncHTTPClient().fetch(request, self.on_response)
+        return httpclient.AsyncHTTPClient().fetch(request)
 
-    @web.asynchronous
-    def get(self, name, uri=''):
-        self.redirection('GET', name)
+    async def get(self, name, uri=''):
+        response = await self.redirection('GET', name)
+        self.on_response(response)
 
-    @web.asynchronous
-    def post(self, name, uri=''):
-        self.redirection('POST', name)
+    async def post(self, name, uri=''):
+        response = await self.redirection('POST', name)
+        self.on_response(response)
 
-    @web.asynchronous
-    def put(self, name, uri=''):
-        self.redirection('PUT', name)
+    async def put(self, name, uri=''):
+        response = await self.redirection('PUT', name)
+        self.on_response(response)
 
     def on_response(self, response):
         if response.code == 304:
             self.set_status(304)
-            self.finish()
             return
 
         if response.error is not None:
@@ -197,7 +195,6 @@ class ProxyHandler(web.RequestHandler):
 
         if response.body:
             self.write(response.body)
-        self.finish()
 
 
 class HelloHandler(web.RequestHandler):

@@ -45,7 +45,7 @@ class WebMethod(object):
             )
         try:
             response.raise_for_status()
-        except Exception as e:
+        except Exception:
             reason = '{} {} > {}'.format(self.method, url, response.reason)
             raise web.HTTPError(response.status_code, reason, reason=reason)
         return response
@@ -64,7 +64,7 @@ class Callback(object):
         response = requests.request(self.method, url)
         try:
             response.raise_for_status()
-        except Exception as e:
+        except Exception:
             reason = '{} {} > {}'.format(
                 self.method, url, response.reason)
             raise web.HTTPError(response.status_code, reason, reason=reason)
@@ -195,7 +195,7 @@ class Application(web.Application):
         signal.signal(signal.SIGTERM, self.stop_server)
         try:
             ioloop.IOLoop.current().start()
-        except Exception as e:
+        except Exception:
             self.logger.warning('An error occurred in the main loop.')
             self.stop_server(15, None)
         return

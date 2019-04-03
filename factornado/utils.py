@@ -15,7 +15,7 @@ class MissingArgError(Exception):
 def to_ts(x):
     """Transforms a string, a timestamp or a timezoned-timestamp into a timestamp.
     """
-    if pd.isnull(x) or x is '':
+    if pd.isnull(x) or x == '':
         return pd.NaT
     if type(x) is bytes:
         x = x.decode('utf-8')
