@@ -48,7 +48,7 @@ class RequestHandler(web.RequestHandler):
                 raise MissingArgError('Argument "{}" is compulsory'.format(arg_name))
             try:
                 args[arg_name] = arg_function(arg)
-            except Exception as e:
+            except Exception:
                 raise ArgParseError('{} "{}" is not a {}.'.format(arg_name, arg, arg_type))
         return args
 
@@ -69,7 +69,7 @@ class RequestHandler(web.RequestHandler):
             arg = self.get_argument(arg_name, arg_default)
             try:
                 kwargs[arg_name] = arg_function(arg)
-            except Exception as e:
+            except Exception:
                 raise ArgParseError('{} "{}" is not a {}.'.format(arg_name, arg, arg_type))
         return kwargs
 
