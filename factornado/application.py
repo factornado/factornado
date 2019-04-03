@@ -105,7 +105,9 @@ class Application(web.Application):
                 subkey: Kwargs(**{
                     subsubkey: WebMethod(
                         subsubkey,
-                        subsubval,
+                        (self.config.get('services_prefix', '').rstrip('/') + subsubval
+                         if subsubval.lower().startswith('/')
+                         else subsubval),
                         logger=self.logger,
                         )
                     for subsubkey, subsubval in subval.items()})

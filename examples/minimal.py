@@ -23,6 +23,9 @@ To end up the process, you can use:
 import factornado
 import os
 
+from factornado.handlers import Swagger, Log, Heartbeat
+from tornado import web
+
 
 class HelloHandler(factornado.handlers.web.RequestHandler):
     swagger = {
@@ -51,8 +54,13 @@ config = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     'minimal.yml')
 
-app = factornado.Application(config,
-                             [("/hello", HelloHandler)])
+app = factornado.Application(config, [
+    ("/hello", HelloHandler),
+    ("/swagger.json", Swagger),
+    ("/swagger", web.RedirectHandler, {'url': '/swagger.json'}),
+    ("/heartbeat", Heartbeat),
+    ("/log", Log)
+])
 
 if __name__ == "__main__":
     app.start_server()

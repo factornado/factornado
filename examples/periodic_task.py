@@ -1,9 +1,11 @@
 import os
-from tornado import web
 import pandas as pd
 import factornado
 
 import bson
+
+from factornado.handlers import Swagger, Log, Heartbeat
+from tornado import web
 
 
 class HelloHandler(web.RequestHandler):
@@ -80,6 +82,10 @@ app = factornado.Application(
     config,
     [
         ("/", HelloHandler),
+        ("/swagger.json", Swagger),
+        ("/swagger", web.RedirectHandler, {'url': '/swagger.json'}),
+        ("/heartbeat", Heartbeat),
+        ("/log", Log),
         ("/todo", Todo),
         ("/do", Do),
         ("/latest", LatestDoc),

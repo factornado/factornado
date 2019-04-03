@@ -53,6 +53,7 @@ tasks:
     todo: periodictask-todo
     do: periodictask-do
 
+services_prefix: http://127.0.0.1:8800
 services:
     tasks:
         hello:

@@ -1,6 +1,9 @@
 0.9
 ~~~
-- Create a `authentication` decorator to check authentication and roles for endpoints. Works fine with keycloak
+- Create a `authentication` decorator to check authentication and roles for endpoints. Works fine with keycloak (5337753, 659dc3a)
+- Create a `get_token` method to generate JWT token using SSO server (edca747)
+- Default handlers need to be declare in the final service (e2164b3)
+- WebMethod use URL rather URI (fb2c5ef)
 
 0.8
 ~~~
