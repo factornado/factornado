@@ -28,7 +28,7 @@ def authenticated(handler_class):
     return handler_class
 
 
-def roles(roles=None):
+def roles(roles=None, clientId=None):
     """ Function decorator to check user role and allow access
     Combinate with the authentication decorator,
     this decorator can be used on method like the following sample:
@@ -37,6 +37,8 @@ def roles(roles=None):
             @roles('admin')
             def get(self):
                 self.write('Only admin users')
+    By default, realm roles are checked
+    If you want client roles don't forget to specify sso_client_id in the config
     """
     def decorator(func):
         def decorated(self, *args, **kwargs):
@@ -48,7 +50,13 @@ def roles(roles=None):
             user_realm_roles = auth_data['realm_access']['roles']
             # Check role if necessary
             if roles is not None and not _checkRole(user_realm_roles, roles):
-                return _unauthorized(403, self)
+                clientId = self.application.config['sso_client_id']
+                if clientId is not None and auth_data['resource_access'][clientId] is not None:
+                    user_client_roles = auth_data['resource_access'][clientId]['roles']
+                    if not _checkRole(user_client_roles, roles):
+                        return _unauthorized(403, self)
+                else:    
+                    return _unauthorized(403, self)
 
             return func(self, *args, **kwargs)
         return decorated
