@@ -13,7 +13,6 @@ import requests
 import pandas as pd
 from tornado import ioloop, web, httpserver
 
-from factornado.handlers import Info, Heartbeat, Swagger, Log
 from factornado.logger import get_logger
 
 factornado_logger = logging.getLogger('factornado')
@@ -80,13 +79,7 @@ class Application(web.Application):
     def __init__(self, config, handlers, logger=None, **kwargs):
         self.config = config if isinstance(config, dict) else yaml.load(open(config))
         self.child_processes = []
-        self.handler_list = [
-            ("/swagger.json", Swagger),
-            ("/swagger", web.RedirectHandler, {'url': '/swagger.json'}),
-            ("/heartbeat", Heartbeat),
-            ("/log", Log),
-            ("/info", Info),
-            ] + handlers
+        self.handler_list = handlers
         super(Application, self).__init__(self.handler_list, **kwargs)
 
         # Set logging config
@@ -112,7 +105,9 @@ class Application(web.Application):
                 subkey: Kwargs(**{
                     subsubkey: WebMethod(
                         subsubkey,
-                        self.config['registry']['url'].rstrip('/')+subsubval,
+                        (self.config.get('services_prefix', '').rstrip('/') + subsubval
+                         if subsubval.lower().startswith('/')
+                         else subsubval),
                         logger=self.logger,
                         )
                     for subsubkey, subsubval in subval.items()})

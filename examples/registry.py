@@ -20,9 +20,10 @@ To end up the process, you can use:
 import factornado
 import os
 import json
+import pandas as pd
 # import bson
 from tornado import web, httputil, httpclient
-import pandas as pd
+from factornado.handlers import Swagger, Log, Heartbeat
 
 
 class RegisterHandler(web.RequestHandler):
@@ -227,6 +228,10 @@ config = os.path.join(
 app = factornado.Application(
     config,
     [
+        ("/swagger.json", Swagger),
+        ("/swagger", web.RedirectHandler, {'url': '/swagger.json'}),
+        ("/heartbeat", Heartbeat),
+        ("/log", Log),
         ("[/]{0,1}", HelloHandler),
         ("/register/all", GetAllHandler),
         ("/register/([^/]*?)", RegisterHandler),

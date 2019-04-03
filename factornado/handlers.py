@@ -26,7 +26,7 @@ class RequestHandler(web.RequestHandler):
             args = self.parse_args()
             kwargs = self.parse_kwargs()
         except (MissingArgError, ArgParseError) as e:
-            raise web.HTTPError(400, e.__repr__(), reason=e.__repr__())
+            raise web.HTTPError(400, e.__repr__(), reason=e.__str__())
         return args, kwargs
 
     def parse_args(self):

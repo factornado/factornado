@@ -16,3 +16,9 @@ log:
         tornado: 30
         urllib3: 30
         factornado: 20
+
+sso:
+    url: https://test.sso.com/auth/
+    realm: my_realm
+    client_id: my_client_id
+    client_secret: my_client_secret
