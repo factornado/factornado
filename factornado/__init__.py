@@ -5,7 +5,7 @@ from factornado.application import Application
 from factornado.logger import get_logger
 
 
-__version__ = 'master'
+__version__ = '0.9.0'
 
 
 __all__ = [
