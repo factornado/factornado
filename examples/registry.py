@@ -29,25 +29,25 @@ from factornado.handlers import Swagger, Log, Heartbeat
 class RegisterHandler(web.RequestHandler):
     """Register a new service."""
     swagger = {
-        "/{name}/{uri}" : {
+        "/{name}/{uri}": {
             "get": {
-                "description" : "Lists the instances of a service that have been registered.",
+                "description": "Lists the instances of a service that have been registered.",
                 "parameters": [],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             },
             "post": {
-                "description" : "Registers an instance of a service.",
+                "description": "Registers an instance of a service.",
                 "parameters": [],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }
@@ -161,15 +161,15 @@ class ProxyHandler(web.RequestHandler):
 
 class HelloHandler(web.RequestHandler):
     swagger = {
-        "/{name}/{uri}" : {
+        "/{name}/{uri}": {
             "get": {
-                "description" : "Says hello.",
+                "description": "Says hello.",
                 "parameters": [],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }

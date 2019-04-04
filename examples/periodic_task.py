@@ -49,15 +49,15 @@ class Do(factornado.Do):
 
 class LatestDoc(web.RequestHandler):
     swagger = {
-        "/{name}/{uri}" : {
+        "/{name}/{uri}": {
             "get": {
-                "description" : "Provide the latest doc writtent in the database.",
+                "description": "Provide the latest doc writtent in the database.",
                 "parameters": [],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }

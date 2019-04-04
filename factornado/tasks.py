@@ -15,7 +15,7 @@ class Action(web.RequestHandler):
     swagger = {
         SwaggerPath("/{name}/{uri}/{{task}}/{{key}}/{{action}}"): {
             "put": {
-                "description" : "Change a task status in applying an action.",
+                "description": "Change a task status in applying an action.",
                 "parameters": [
                     {
                         "in": "path",
@@ -31,7 +31,7 @@ class Action(web.RequestHandler):
                         "in": "path",
                         "name": "key",
                         "required": True,
-                        "description": "The task key : it has to be unique.",
+                        "description": "The task key: it has to be unique.",
                         "schema": {
                             "type": "string",
                             "default": "someKey"
@@ -41,7 +41,7 @@ class Action(web.RequestHandler):
                         "in": "path",
                         "name": "action",
                         "required": True,
-                        "description": "The action to perform : delete|assign|success|stack|error.",
+                        "description": "The action to perform: delete|assign|success|stack|error.",
                         "schema": {
                             "type": "string",
                             "enum": ["delete", "assign", "success", "stack", "error"],
@@ -65,10 +65,10 @@ class Action(web.RequestHandler):
                     }
                 },
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }
@@ -185,7 +185,7 @@ class Force(web.RequestHandler):
     swagger = {
         SwaggerPath("/{name}/{uri}/{{task}}/{{key}}/{{status}}"): {
             "put": {
-                "description" : "Force a task status.",
+                "description": "Force a task status.",
                 "parameters": [
                     {
                         "in": "path",
@@ -201,7 +201,7 @@ class Force(web.RequestHandler):
                         "in": "path",
                         "name": "key",
                         "required": True,
-                        "description": "The task key : it has to be unique.",
+                        "description": "The task key: it has to be unique.",
                         "schema": {
                             "type": "string",
                             "default": "someKey"
@@ -211,7 +211,7 @@ class Force(web.RequestHandler):
                         "in": "path",
                         "name": "status",
                         "required": True,
-                        "description": "The status to be set : done|toredo|fail|todo|doing|none.",
+                        "description": "The status to be set: done|toredo|fail|todo|doing|none.",
                         "schema": {
                             "type": "string",
                             "enum": ["done", "toredo", "fail", "todo", "doing", "none"],
@@ -235,10 +235,10 @@ class Force(web.RequestHandler):
                     }
                 },
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }
@@ -316,7 +316,7 @@ class AssignOne(web.RequestHandler):
     swagger = {
         SwaggerPath("/{name}/{uri}/{{task}}"): {
             "put": {
-                "description" : "Pick a task that has not been done yet, and assign it.",
+                "description": "Pick a task that has not been done yet, and assign it.",
                 "parameters": [
                     {
                         "in": "path",
@@ -330,11 +330,11 @@ class AssignOne(web.RequestHandler):
                     }
                 ],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    204 : {"description" : "No task to do"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    204: {"description": "No task to do"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }
@@ -379,7 +379,7 @@ class GetByKey(web.RequestHandler):
     swagger = {
         SwaggerPath("/{name}/{uri}/{{task}}/{{key}}"): {
             "get": {
-                "description" : "Get a task with given key (alter nothing).",
+                "description": "Get a task with given key (alter nothing).",
                 "parameters": [
                     {
                         "in": "path",
@@ -395,7 +395,7 @@ class GetByKey(web.RequestHandler):
                         "in": "path",
                         "name": "key",
                         "required": True,
-                        "description": "The task key : it has to be unique.",
+                        "description": "The task key: it has to be unique.",
                         "schema": {
                             "type": "string",
                             "default": "someKey"
@@ -403,11 +403,11 @@ class GetByKey(web.RequestHandler):
                     }
                 ],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    204 : {"description" : "No task matching"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    204: {"description": "No task matching"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }
@@ -425,7 +425,7 @@ class GetByStatus(web.RequestHandler):
     swagger = {
         SwaggerPath("/{name}/{uri}/{{task}}/{{status}}"): {
             "get": {
-                "description" : "Get tasks with given status (alter nothing).",
+                "description": "Get tasks with given status (alter nothing).",
                 "parameters": [
                     {
                         "in": "path",
@@ -441,7 +441,7 @@ class GetByStatus(web.RequestHandler):
                         "in": "path",
                         "name": "status",
                         "required": True,
-                        "description": "The status to be set : done|toredo|fail|todo|doing|none.",
+                        "description": "The status to be set: done|toredo|fail|todo|doing|none.",
                         "schema": {
                             "type": "string",
                             "enum": ["done", "toredo", "fail", "todo", "doing", "none"],
@@ -450,11 +450,11 @@ class GetByStatus(web.RequestHandler):
                     }
                 ],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    204 : {"description" : "No task matching"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    204: {"description": "No task matching"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }

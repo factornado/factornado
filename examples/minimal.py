@@ -29,15 +29,15 @@ from tornado import web
 
 class HelloHandler(factornado.handlers.web.RequestHandler):
     swagger = {
-        "/{name}/{uri}" : {
+        "/{name}/{uri}": {
             "get": {
-                "description" : "Says hello.",
+                "description": "Says hello.",
                 "parameters": [],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }

@@ -76,15 +76,15 @@ class RequestHandler(web.RequestHandler):
 
 class Info(web.RequestHandler):
     swagger = {
-        "/{name}/{uri}" : {
+        "/{name}/{uri}": {
             "post": {
-                "description" : "Get the information on the service's parameters.",
+                "description": "Get the information on the service's parameters.",
                 "parameters": [],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }
@@ -96,15 +96,15 @@ class Info(web.RequestHandler):
 
 class Heartbeat(web.RequestHandler):
     swagger = {
-        "/{name}/{uri}" : {
+        "/{name}/{uri}": {
             "post": {
-                "description" : "Tell registry that the service is alive.",
+                "description": "Tell registry that the service is alive.",
                 "parameters": [],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }
@@ -126,28 +126,28 @@ class Heartbeat(web.RequestHandler):
         self.client = httpclient.AsyncHTTPClient()
         response = await self.client.fetch(request)
 
-        factornado_logger.debug('HEARTBEAT : {} ({}).'.format(
+        factornado_logger.debug('HEARTBEAT: {} ({}).'.format(
                 response.code, response.reason[:30]))
 
         if response.error is None:
             self.write('ok')
         else:
-            self.write('ko : ({}) {}'.format(
+            self.write('ko: ({}) {}'.format(
                     response.code, response.reason))
         self.client.close()
 
 
 class Todo(web.RequestHandler):
     swagger = {
-        "/{name}/{uri}" : {
+        "/{name}/{uri}": {
             "post": {
-                "description" : "Update the list of tasks to be done.",
+                "description": "Update the list of tasks to be done.",
                 "parameters": [],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }
@@ -176,7 +176,7 @@ class Todo(web.RequestHandler):
             data={},
             )
 
-        factornado_logger.debug('TODO : Start scanning for new tasks')
+        factornado_logger.debug('TODO: Start scanning for new tasks')
         nb_loops = 0
 
         while True:
@@ -196,9 +196,9 @@ class Todo(web.RequestHandler):
                 # Get all documents after `lastScanObjectId`
                 # #########################################
                 todo_tasks, data = self.todo_list(data)
-                factornado_logger.debug('TODO : Found {} tasks'.format(len(todo_tasks)))
+                factornado_logger.debug('TODO: Found {} tasks'.format(len(todo_tasks)))
                 for task_key, task_data in todo_tasks:
-                    factornado_logger.debug('TODO : Set task {}/{}'.format(task_key,
+                    factornado_logger.debug('TODO: Set task {}/{}'.format(task_key,
                                                                            task_data))
                     r = self.application.services.tasks.action.put(
                         task=self.application.config['tasks'][self.do_task],
@@ -229,12 +229,12 @@ class Todo(web.RequestHandler):
                             }
                         },
                     )
-                factornado_logger.exception('TODO : Failed todoing.')
+                factornado_logger.exception('TODO: Failed todoing.')
                 return {'nb': 0, 'ok': False, 'reason': e.__repr__()}
 
             nb_loops += 1
 
-        log_str = 'TODO : Finished scanning for new tasks. Found {} in {} loops.'.format(
+        log_str = 'TODO: Finished scanning for new tasks. Found {} in {} loops.'.format(
             nb_created_tasks, nb_loops)
         if nb_created_tasks > 0:
             factornado_logger.info(log_str)
@@ -246,15 +246,15 @@ class Todo(web.RequestHandler):
 
 class Do(web.RequestHandler):
     swagger = {
-        "/{name}/{uri}" : {
+        "/{name}/{uri}": {
             "post": {
-                "description" : "Pick one task and do it.",
+                "description": "Pick one task and do it.",
                 "parameters": [],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }
@@ -283,8 +283,8 @@ class Do(web.RequestHandler):
         task_data = task['data']
 
         try:
-            factornado_logger.debug('DO : Got task: {}'.format(task_key))
-            factornado_logger.debug('DO : Got task data: {}'.format(task_data))
+            factornado_logger.debug('DO: Got task: {}'.format(task_key))
+            factornado_logger.debug('DO: Got task data: {}'.format(task_data))
             # Load the statuses.
             out = self.do_something(task_key, task_data)
 
@@ -310,26 +310,25 @@ class Do(web.RequestHandler):
                         }
                     },
                 )
-            factornado_logger.exception('DO : Failed doing task {}.'.format(task_key))
+            factornado_logger.exception('DO: Failed doing task {}.'.format(task_key))
             return {'nb': 0, 'key': task_key, 'ok': False, 'reason': e.__repr__()}
 
 
 class Swagger(web.RequestHandler):
     swagger = {
-        "/{name}/{uri}" : {
+        "/{name}/{uri}": {
             "get": {
-                "description" : "Get the service documentation.",
+                "description": "Get the service documentation.",
                 "parameters": [],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }
     }
-
 
     def initialize(self, handlers=[]):
         self.handlers = handlers
@@ -364,7 +363,7 @@ class Swagger(web.RequestHandler):
         # This object is usefull to declare generic types,
         # service response representation...
         if self.application.swagger_schemas is not None:
-            for key,value in self.application.swagger_schemas.iteritems():
+            for key, value in self.application.swagger_schemas.iteritems():
                 sw['components']['schemas'][key] = value
 
         self.write(json.dumps(sw, indent=2))
@@ -372,9 +371,9 @@ class Swagger(web.RequestHandler):
 
 class Log(web.RequestHandler):
     swagger = {
-        "/{name}/{uri}" : {
+        "/{name}/{uri}": {
             "get": {
-                "description" : "Get the server logs.",
+                "description": "Get the server logs.",
                 "parameters": [{
                     "in": "query",
                     "name": "n",
@@ -387,10 +386,10 @@ class Log(web.RequestHandler):
                     }
                 }],
                 "responses": {
-                    200 : {"description" : "OK"},
-                    401 : {"description" : "Unauthorized"},
-                    403 : {"description" : "Forbidden"},
-                    404 : {"description" : "Not Found"},
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
             }
         }
