@@ -7,6 +7,21 @@ from tornado import web
 
 
 class HelloHandler(web.RequestHandler):
+    swagger = {
+        "/{name}/{uri}" : {
+            "get": {
+                "description" : "Says hello.",
+                "parameters": [],
+                "responses": {
+                    200 : {"description" : "OK"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
+                }
+            }
+        }
+    }
+
     def get(self):
         self.write('This is tasks\n')
 
@@ -28,7 +43,7 @@ app = factornado.Application(
         ("/assignOne/([^/]*?)", factornado.tasks.AssignOne),
         ("/getByKey/([^/]*?)/([^/]*?)", factornado.tasks.GetByKey),
         ("/getByStatus/([^/]*?)/([^/]*?)", factornado.tasks.GetByStatus),
-        ])
+    ])
 
 
 if __name__ == "__main__":

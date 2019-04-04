@@ -76,22 +76,19 @@ class RequestHandler(web.RequestHandler):
 
 class Info(web.RequestHandler):
     swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Get the information on the service's parameters.",
-                "method": "GET",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
+        "/{name}/{uri}" : {
+            "post": {
+                "description" : "Get the information on the service's parameters.",
+                "parameters": [],
+                "responses": {
+                    200 : {"description" : "OK"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     def get(self):
         self.write(self.application.config)
@@ -99,22 +96,19 @@ class Info(web.RequestHandler):
 
 class Heartbeat(web.RequestHandler):
     swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Tell the registry that the service is alive.",
-                "method": "POST",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
+        "/{name}/{uri}" : {
+            "post": {
+                "description" : "Tell registry that the service is alive.",
+                "parameters": [],
+                "responses": {
+                    200 : {"description" : "OK"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     async def post(self):
         request = httpclient.HTTPRequest(
@@ -145,22 +139,19 @@ class Heartbeat(web.RequestHandler):
 
 class Todo(web.RequestHandler):
     swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Update the list of tasks to be done.",
-                "method": "POST",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
+        "/{name}/{uri}" : {
+            "post": {
+                "description" : "Update the list of tasks to be done.",
+                "parameters": [],
+                "responses": {
+                    200 : {"description" : "OK"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     todo_task = 'todo'
     do_task = 'do'
@@ -255,22 +246,19 @@ class Todo(web.RequestHandler):
 
 class Do(web.RequestHandler):
     swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Pick one task and do it.",
-                "method": "POST",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
+        "/{name}/{uri}" : {
+            "post": {
+                "description" : "Pick one task and do it.",
+                "parameters": [],
+                "responses": {
+                    200 : {"description" : "OK"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     do_task = 'do'
 
@@ -328,77 +316,85 @@ class Do(web.RequestHandler):
 
 class Swagger(web.RequestHandler):
     swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Get the module documentation.",
-                "method": "GET",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
+        "/{name}/{uri}" : {
+            "get": {
+                "description" : "Get the service documentation.",
+                "parameters": [],
+                "responses": {
+                    200 : {"description" : "OK"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
+
 
     def initialize(self, handlers=[]):
         self.handlers = handlers
 
     def get(self):
         sw = OrderedDict([
-            ("swaggerVersion", "1.2"),
-            ("resourcePath", "/{}".format(self.application.config['name'])),
-            ("basePath", "/api"),
-            ("apiVersion", "1.0"),
-            ("produces", ["*/*", "application/json"]),
-            ("apis", []),
-            ])
+            ("openapi", "3.0.0"),
+            ("info", {
+                "title": self.application.config['name'],
+                "version": "1.0.1"
+            }),
+            ("servers", [{
+                "url": "/api"
+            }]),
+            ("paths", {}),
+            ("components", {})
+        ])
 
         for h in self.application.handler_list:
             uri, handler = h[:2]
-            if hasattr(handler, 'swagger'):
-                sw['apis'].append(OrderedDict([
-                    ('path', handler.swagger.get('path', "/{name}/{uri}").format(
-                        name=self.application.config['name'],
-                        uri=uri.lstrip('/'))),
-                    ('operations', handler.swagger.get('operations', []))
-                    ]))
+            # Attribute swagger contains path declaration
+            # https://swagger.io/specification/#pathsObject
+            if hasattr(handler, 'swagger') and len(handler.swagger.keys()) > 0:
+                path = list(handler.swagger.keys())[0]
+                final_path = path.format(
+                    name=self.application.config['name'],
+                    uri=uri.lstrip('/')
+                )
+                sw['paths'][final_path] = handler.swagger[path]
+
+        # https://swagger.io/specification/#schemaObject
+        # This object is usefull to declare generic types,
+        # service response representation...
+        if self.application.swagger_schemas is not None:
+            for key,value in self.application.swagger_schemas.iteritems():
+                sw['components']['schemas'][key] = value
 
         self.write(json.dumps(sw, indent=2))
 
 
 class Log(web.RequestHandler):
     swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Get the server logs.",
-                "method": "GET",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": [
-                    {
-                        "name": "n",
+        "/{name}/{uri}" : {
+            "get": {
+                "description" : "Get the server logs.",
+                "parameters": [{
+                    "in": "query",
+                    "name": "n",
+                    "required": False,
+                    "description": "The number of lines to retrieve.",
+                    "schema": {
                         "type": "integer",
                         "format": "int32",
-                        "paramType": "query",
-                        "required": False,
-                        "defaultValue": 20,
-                        "description": "The number of lines to retrieve."
-                        }
-                    ]
+                        "default": 20
+                    }
+                }],
+                "responses": {
+                    200 : {"description" : "OK"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     def get(self):
         n = self.get_argument('n', '20')

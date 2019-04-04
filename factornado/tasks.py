@@ -1,81 +1,78 @@
 # -*- coding: utf-8 -*-
-
-from tornado import web, escape
 import pandas as pd
 import json
 import bson
 import pymongo
 import logging
 
+from tornado import web, escape
+from factornado.utils import SwaggerPath, tansform_bson_id
+
 factornado_logger = logging.getLogger('factornado')
-
-
-class SwaggerPath(str):
-    """A simple class to overload str.format."""
-    def format(self, uri, **kwargs):
-        return super().format(
-            uri=uri.replace("/([^/]*?)", ""), **kwargs)
-
-
-def tansform_bson_id(y):
-    x = {key: val for key, val in y.items()}
-    x['id'] = str(x['id']) if x['id'] is not None else None
-    return x
 
 
 class Action(web.RequestHandler):
     swagger = {
-        "path": SwaggerPath("/{name}/{uri}/{{task}}/{{key}}/{{action}}"),
-        "operations": [
-            {
-                "notes": "Change a task status in applying an action.",
-                "method": "PUT",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
+        SwaggerPath("/{name}/{uri}/{{task}}/{{key}}/{{action}}"): {
+            "put": {
+                "description" : "Change a task status in applying an action.",
                 "parameters": [
                     {
+                        "in": "path",
                         "name": "task",
-                        "type": "string",
-                        "format": None,
-                        "paramType": "path",
                         "required": True,
-                        "defaultValue": "someTask",
-                        "description": "The task category."
-                        },
-                    {
-                        "name": "key",
-                        "type": "string",
-                        "format": None,
-                        "paramType": "path",
-                        "required": True,
-                        "defaultValue": "someKey",
-                        "description": "The task key : it has to be unique."
-                        },
-                    {
-                        "name": "action",
-                        "type": "string",
-                        "format": None,
-                        "paramType": "path",
-                        "required": True,
-                        "defaultValue": "stack",
-                        "description": "The action to perform : delete|assign|success|stack|error."
-                        },
-                    {
-                        "name": "body",
-                        "paramType": "body",
-                        "required": False,
-                        "defaultValue": "{\"day\":\"2016-05-01\"}",
-                        "description": "Data attached to the task."
+                        "description": "The task category.",
+                        "schema": {
+                            "type": "string",
+                            "default": "someTask"
                         }
-                    ]
+                    },
+                    {
+                        "in": "path",
+                        "name": "key",
+                        "required": True,
+                        "description": "The task key : it has to be unique.",
+                        "schema": {
+                            "type": "string",
+                            "default": "someKey"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "action",
+                        "required": True,
+                        "description": "The action to perform : delete|assign|success|stack|error.",
+                        "schema": {
+                            "type": "string",
+                            "enum": ["delete", "assign", "success", "stack", "error"],
+                            "default": "stack"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Data attached to the task.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                'properties': {
+                                    "day": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    200 : {"description" : "OK"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     def put(self, task, key, action):
 
@@ -186,60 +183,66 @@ class Action(web.RequestHandler):
 
 class Force(web.RequestHandler):
     swagger = {
-        "path": SwaggerPath("/{name}/{uri}/{{task}}/{{key}}/{{status}}"),
-        "operations": [
-            {
-                "notes": "Force a task status.",
-                "method": "PUT",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404},
-                    {"message": "Not Found", "code": 409},
-                    {"message": "Task unknown", "code": 410},
-                    {"message": "data is not JSON", "code": 501}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
+        SwaggerPath("/{name}/{uri}/{{task}}/{{key}}/{{status}}"): {
+            "put": {
+                "description" : "Force a task status.",
                 "parameters": [
                     {
+                        "in": "path",
                         "name": "task",
-                        "type": "string",
-                        "format": None,
-                        "paramType": "path",
                         "required": True,
-                        "defaultValue": "someTask",
-                        "description": "The task category."
-                        },
-                    {
-                        "name": "key",
-                        "type": "string",
-                        "format": None,
-                        "paramType": "path",
-                        "required": True,
-                        "defaultValue": "someKey",
-                        "description": "The task key : it has to be unique."
-                        },
-                    {
-                        "name": "status",
-                        "type": "string",
-                        "format": None,
-                        "paramType": "path",
-                        "required": True,
-                        "defaultValue": "todo",
-                        "description": "The status to be set : done|toredo|fail|todo|doing|none."
-                        },
-                    {
-                        "name": "body",
-                        "paramType": "body",
-                        "required": False,
-                        "defaultValue": "{\"day\":\"2016-05-01\"}",
-                        "description": "Data attached to the task."
+                        "description": "The task category.",
+                        "schema": {
+                            "type": "string",
+                            "default": "someTask"
                         }
-                    ]
+                    },
+                    {
+                        "in": "path",
+                        "name": "key",
+                        "required": True,
+                        "description": "The task key : it has to be unique.",
+                        "schema": {
+                            "type": "string",
+                            "default": "someKey"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "status",
+                        "required": True,
+                        "description": "The status to be set : done|toredo|fail|todo|doing|none.",
+                        "schema": {
+                            "type": "string",
+                            "enum": ["done", "toredo", "fail", "todo", "doing", "none"],
+                            "default": "todo"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Data attached to the task.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                'properties': {
+                                    "day": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    200 : {"description" : "OK"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     def put(self, task, key, status):
         # Parse arguments
@@ -311,35 +314,31 @@ class Force(web.RequestHandler):
 
 class AssignOne(web.RequestHandler):
     swagger = {
-        "path": SwaggerPath("/{name}/{uri}/{{task}}"),
-        "operations": [
-            {
-                "notes": "Pick a task that has not been done yet, and assign it.",
-                "method": "PUT",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "No task to do", "code": 204},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404},
-                    {"message": "Not Found", "code": 409},
-                    {"message": "Task unknown", "code": 410}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
+        SwaggerPath("/{name}/{uri}/{{task}}"): {
+            "put": {
+                "description" : "Pick a task that has not been done yet, and assign it.",
                 "parameters": [
                     {
+                        "in": "path",
                         "name": "task",
-                        "type": "string",
-                        "format": None,
-                        "paramType": "path",
                         "required": True,
-                        "defaultValue": "someTask",
-                        "description": "The taskname category."
+                        "description": "The task category.",
+                        "schema": {
+                            "type": "string",
+                            "default": "someTask"
                         }
-                    ]
+                    }
+                ],
+                "responses": {
+                    200 : {"description" : "OK"},
+                    204 : {"description" : "No task to do"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     def put(self, task):
         while True:
@@ -378,46 +377,41 @@ class AssignOne(web.RequestHandler):
 
 class GetByKey(web.RequestHandler):
     swagger = {
-        "path": SwaggerPath("/{name}/{uri}/{{task}}/{{key}}"),
-        "operations": [
-            {
-                "notes": "Get a task with given key (alter nothing).",
-                "method": "GET",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "No task matching", "code": 204},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404},
-                    {"message": "Not Found", "code": 409},
-                    {"message": "Task unknown", "code": 410},
-                    {"message": "Task unknown", "code": 411},
-                    {"message": "Task unknown", "code": 412}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
+        SwaggerPath("/{name}/{uri}/{{task}}/{{key}}"): {
+            "get": {
+                "description" : "Get a task with given key (alter nothing).",
                 "parameters": [
                     {
+                        "in": "path",
                         "name": "task",
-                        "type": "string",
-                        "format": None,
-                        "paramType": "path",
                         "required": True,
-                        "defaultValue": "someTask",
-                        "description": "The task category."
-                        },
-                    {
-                        "name": "key",
-                        "type": "string",
-                        "format": None,
-                        "paramType": "path",
-                        "required": True,
-                        "defaultValue": "someKey",
-                        "description": "The task key : it has to be unique."
+                        "description": "The task category.",
+                        "schema": {
+                            "type": "string",
+                            "default": "someTask"
                         }
-                    ]
+                    },
+                    {
+                        "in": "path",
+                        "name": "key",
+                        "required": True,
+                        "description": "The task key : it has to be unique.",
+                        "schema": {
+                            "type": "string",
+                            "default": "someKey"
+                        }
+                    }
+                ],
+                "responses": {
+                    200 : {"description" : "OK"},
+                    204 : {"description" : "No task matching"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     def get(self, task, key):
         todo = self.application.mongo.tasks.find_one({'key': key, 'task': task})
@@ -429,45 +423,42 @@ class GetByKey(web.RequestHandler):
 
 class GetByStatus(web.RequestHandler):
     swagger = {
-        "path": SwaggerPath("/{name}/{uri}/{{task}}/{{status}}"),
-        "operations": [
-            {
-                "notes": "Get tasks with given status (alter nothing).",
-                "method": "GET",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404},
-                    {"message": "Not Found", "code": 409},
-                    {"message": "Task unknown", "code": 410},
-                    {"message": "Task unknown", "code": 411},
-                    {"message": "Task unknown", "code": 412}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
+        SwaggerPath("/{name}/{uri}/{{task}}/{{status}}"): {
+            "get": {
+                "description" : "Get tasks with given status (alter nothing).",
                 "parameters": [
                     {
+                        "in": "path",
                         "name": "task",
-                        "type": "string",
-                        "format": None,
-                        "paramType": "path",
                         "required": True,
-                        "defaultValue": "someTask",
-                        "description": "The task category."
-                        },
-                    {
-                        "name": "status",
-                        "type": "string",
-                        "format": None,
-                        "paramType": "path",
-                        "required": True,
-                        "defaultValue": "done,doing",
-                        "description": "The status searched: done|toredo|fail|todo|doing|none."
+                        "description": "The task category.",
+                        "schema": {
+                            "type": "string",
+                            "default": "someTask"
                         }
-                    ]
+                    },
+                    {
+                        "in": "path",
+                        "name": "status",
+                        "required": True,
+                        "description": "The status to be set : done|toredo|fail|todo|doing|none.",
+                        "schema": {
+                            "type": "string",
+                            "enum": ["done", "toredo", "fail", "todo", "doing", "none"],
+                            "default": "todo"
+                        }
+                    }
+                ],
+                "responses": {
+                    200 : {"description" : "OK"},
+                    204 : {"description" : "No task matching"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     def get(self, task, status_list):
         status_list = escape.url_unescape(status_list.lower()).split(',')

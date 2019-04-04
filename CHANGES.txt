@@ -1,3 +1,7 @@
+0.10
+~~~
+- Swagger is now in openapi 3.0.0
+
 0.9
 ~~~
 - Create a `authentication` decorator to check authentication and roles for endpoints. Works fine with keycloak (5337753, 659dc3a)

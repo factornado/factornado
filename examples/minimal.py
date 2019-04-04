@@ -29,22 +29,19 @@ from tornado import web
 
 class HelloHandler(factornado.handlers.web.RequestHandler):
     swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Says hello.",
-                "method": "GET",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
+        "/{name}/{uri}" : {
+            "get": {
+                "description" : "Says hello.",
+                "parameters": [],
+                "responses": {
+                    200 : {"description" : "OK"},
+                    401 : {"description" : "Unauthorized"},
+                    403 : {"description" : "Forbidden"},
+                    404 : {"description" : "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     def get(self):
         self.write('Hello world\n')

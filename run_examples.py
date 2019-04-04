@@ -21,10 +21,10 @@ class ServerList(object):
             stdout=False,
             )
         self.servers = OrderedDict([
-            ('registry', registry),
+            # ('registry', registry),
             ('tasks', tasks),
-            ('minimal', minimal),
-            ('periodic_task', periodic_task),
+            # ('minimal', minimal),
+            # ('periodic_task', periodic_task),
             ])
         self.child_processes = []
 

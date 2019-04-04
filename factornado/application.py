@@ -76,10 +76,12 @@ class Callback(object):
 
 
 class Application(web.Application):
-    def __init__(self, config, handlers, logger=None, **kwargs):
+    def __init__(self, config, handlers, swagger_schemas=None, logger=None, **kwargs):
         self.config = config if isinstance(config, dict) else yaml.load(open(config))
         self.child_processes = []
         self.handler_list = handlers
+        # Swagger schemas are usefull share data model between handlers
+        self.swagger_schemas = swagger_schemas
         super(Application, self).__init__(self.handler_list, **kwargs)
 
         # Set logging config
