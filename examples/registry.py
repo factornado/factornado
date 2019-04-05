@@ -28,37 +28,30 @@ from factornado.handlers import Swagger, Log, Heartbeat
 
 class RegisterHandler(web.RequestHandler):
     """Register a new service."""
-
     swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Registers an instance of a service.",
-                "method": "POST",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
-                },
-            {
-                "notes": "Lists the instances of a service that have been registered.",
-                "method": "GET",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
+        "/{name}/{uri}": {
+            "get": {
+                "description": "Lists the instances of a service that have been registered.",
+                "parameters": [],
+                "responses": {
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
-            ]}
+            },
+            "post": {
+                "description": "Registers an instance of a service.",
+                "parameters": [],
+                "responses": {
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
+                }
+            }
+        }
+    }
 
     def post(self, name=None):
         body = json.loads(self.request.body.decode('utf-8'))
@@ -84,24 +77,6 @@ class RegisterHandler(web.RequestHandler):
 class GetAllHandler(web.RequestHandler):
     """Get the list of all registered services."""
 
-    swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Get the list of all registered services.",
-                "method": "GET",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
-                }
-            ]}
-
     def get(self):
         data = pd.DataFrame([{'name': x['name'], 'doc': x}
                              for x in self.application.mongo.registry_collection.find()])
@@ -109,24 +84,6 @@ class GetAllHandler(web.RequestHandler):
 
 
 class ProxyHandler(web.RequestHandler):
-    swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Proxy a service to one of it's url.",
-                "method": method,
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
-                } for method in ['GET', 'POST', 'PUT']
-            ]}
-
     def redirection(self, method, name):
         # Get the service configuration.
         query = {'name': name}
@@ -180,6 +137,10 @@ class ProxyHandler(web.RequestHandler):
         response = await self.redirection('PUT', name)
         self.on_response(response)
 
+    async def delete(self, name, uri=''):
+        response = await self.redirection('DELETE', name)
+        self.on_response(response)
+
     def on_response(self, response):
         if response.code == 304:
             self.set_status(304)
@@ -200,22 +161,19 @@ class ProxyHandler(web.RequestHandler):
 
 class HelloHandler(web.RequestHandler):
     swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Says hello.",
-                "method": "GET",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
+        "/{name}/{uri}": {
+            "get": {
+                "description": "Says hello.",
+                "parameters": [],
+                "responses": {
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     def get(self):
         self.write('This is registry\n')
@@ -232,12 +190,12 @@ app = factornado.Application(
         ("/swagger", web.RedirectHandler, {'url': '/swagger.json'}),
         ("/heartbeat", Heartbeat),
         ("/log", Log),
-        ("[/]{0,1}", HelloHandler),
+        ("/", HelloHandler),
         ("/register/all", GetAllHandler),
         ("/register/([^/]*?)", RegisterHandler),
         ("/([^/]*?)/(.*)", ProxyHandler),
         ("/([^/]*?)", ProxyHandler),
-        ])
+    ])
 
 if __name__ == "__main__":
     app.start_server()

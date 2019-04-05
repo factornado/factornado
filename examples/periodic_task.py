@@ -49,22 +49,19 @@ class Do(factornado.Do):
 
 class LatestDoc(web.RequestHandler):
     swagger = {
-        "path": "/{name}/{uri}",
-        "operations": [
-            {
-                "notes": "Provide the latest doc writtent in the database.",
-                "method": "GET",
-                "responseMessages": [
-                    {"message": "OK", "code": 200},
-                    {"message": "Unauthorized", "code": 401},
-                    {"message": "Forbidden", "code": 403},
-                    {"message": "Not Found", "code": 404}
-                    ],
-                "deprecated": False,
-                "produces": ["application/json"],
-                "parameters": []
+        "/{name}/{uri}": {
+            "get": {
+                "description": "Provide the latest doc writtent in the database.",
+                "parameters": [],
+                "responses": {
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
                 }
-            ]}
+            }
+        }
+    }
 
     def get(self):
         doc = self.application.mongo.periodic.find_one({}, sort=[('nb', -1)])

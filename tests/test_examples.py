@@ -45,7 +45,6 @@ def server():
                 logger.debug('Success HEARTBEAT on {} (try {})'.format(key, 1+i))
         except Exception:
             raise
-            continue
         break
 
     class s(object):

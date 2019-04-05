@@ -12,6 +12,19 @@ class MissingArgError(Exception):
     pass
 
 
+class SwaggerPath(str):
+    """A simple class to overload str.format."""
+    def format(self, uri, **kwargs):
+        return super().format(
+            uri=uri.replace("/([^/]*?)", ""), **kwargs)
+
+
+def tansform_bson_id(y):
+    x = {key: val for key, val in y.items()}
+    x['id'] = str(x['id']) if x['id'] is not None else None
+    return x
+
+
 def to_ts(x):
     """Transforms a string, a timestamp or a timezoned-timestamp into a timestamp.
     """
