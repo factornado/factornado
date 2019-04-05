@@ -175,7 +175,6 @@ class Application(web.Application):
         out = loop.run_until_complete(_execute(handler))
         return out
 
-
     def get(self, uri, **kwargs):
         """Performs a GET request over the application, without going through the network.
 
