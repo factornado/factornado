@@ -199,7 +199,7 @@ class Todo(web.RequestHandler):
                 factornado_logger.debug('TODO: Found {} tasks'.format(len(todo_tasks)))
                 for task_key, task_data in todo_tasks:
                     factornado_logger.debug('TODO: Set task {}/{}'.format(task_key,
-                                                                           task_data))
+                                                                          task_data))
                     r = self.application.services.tasks.action.put(
                         task=self.application.config['tasks'][self.do_task],
                         key=escape.url_escape(task_key),
@@ -314,61 +314,6 @@ class Do(web.RequestHandler):
             return {'nb': 0, 'key': task_key, 'ok': False, 'reason': e.__repr__()}
 
 
-class Swagger(web.RequestHandler):
-    swagger = {
-        "/{name}/{uri}": {
-            "get": {
-                "description": "Get the service documentation.",
-                "parameters": [],
-                "responses": {
-                    200: {"description": "OK"},
-                    401: {"description": "Unauthorized"},
-                    403: {"description": "Forbidden"},
-                    404: {"description": "Not Found"},
-                }
-            }
-        }
-    }
-
-    def initialize(self, handlers=[]):
-        self.handlers = handlers
-
-    def get(self):
-        sw = OrderedDict([
-            ("openapi", "3.0.0"),
-            ("info", {
-                "title": self.application.config['name'],
-                "version": "1.0.1"
-            }),
-            ("servers", [{
-                "url": "/api"
-            }]),
-            ("paths", {}),
-            ("components", {})
-        ])
-
-        for h in self.application.handler_list:
-            uri, handler = h[:2]
-            # Attribute swagger contains path declaration
-            # https://swagger.io/specification/#pathsObject
-            if hasattr(handler, 'swagger') and len(handler.swagger.keys()) > 0:
-                path = list(handler.swagger.keys())[0]
-                final_path = path.format(
-                    name=self.application.config['name'],
-                    uri=uri.lstrip('/')
-                )
-                sw['paths'][final_path] = handler.swagger[path]
-
-        # https://swagger.io/specification/#schemaObject
-        # This object is usefull to declare generic types,
-        # service response representation...
-        if self.application.swagger_schemas is not None:
-            for key, value in self.application.swagger_schemas.iteritems():
-                sw['components']['schemas'][key] = value
-
-        self.write(json.dumps(sw, indent=2))
-
-
 class Log(web.RequestHandler):
     swagger = {
         "/{name}/{uri}": {
@@ -405,3 +350,63 @@ class Log(web.RequestHandler):
         filename = self.application.config['log']['file']
         tail = Popen(['tail', '-%d' % n, filename], stdout=PIPE).communicate()[0]
         self.write(tail)
+
+
+class Swagger(web.RequestHandler):
+    swagger = {
+        "/{name}/{uri}": {
+            "get": {
+                "description": "Get the service documentation.",
+                "parameters": [],
+                "responses": {
+                    200: {"description": "OK"},
+                    401: {"description": "Unauthorized"},
+                    403: {"description": "Forbidden"},
+                    404: {"description": "Not Found"},
+                }
+            }
+        }
+    }
+
+    def initialize(self, handlers=[]):
+        self.handlers = handlers
+
+    def get(self):
+        sw = OrderedDict([
+            ("openapi", "3.0.0"),
+            ("info", {
+                "title": self.application.config['name'],
+                "version": (
+                    self.application.config['tag']
+                    if 'tag' in self.application.config
+                    else 'v1.0'
+                ),
+            }),
+            ("servers", [{
+                "url": "/api"
+            }]),
+            ("paths", {}),
+            ("components", {})
+        ])
+
+        for h in self.application.handler_list:
+            uri, handler = h[:2]
+            # Attribute swagger contains path declaration
+            # https://swagger.io/specification/#pathsObject
+            if hasattr(handler, 'swagger') and len(handler.swagger.keys()) > 0:
+                path = list(handler.swagger.keys())[0]
+                final_path = path.format(
+                    name=self.application.config['name'],
+                    uri=uri.lstrip('/')
+                )
+                sw['paths'][final_path] = handler.swagger[path]
+
+        # This object is usefull to declare generic types,
+        # service response representation...
+        # https://swagger.io/docs/specification/components/
+        # https://swagger.io/specification/#schemaObject
+        if self.application.swagger_components is not None:
+            for key, value in self.application.swagger_components.iteritems():
+                sw['components'][key] = value
+
+        self.write(json.dumps(sw, indent=2))
