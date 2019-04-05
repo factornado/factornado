@@ -7,6 +7,7 @@ import socket
 import yaml
 import re
 import signal
+import asyncio
 
 import pymongo
 import requests
@@ -18,7 +19,7 @@ from factornado.logger import get_logger
 factornado_logger = logging.getLogger('factornado')
 
 
-def _execute(self):
+async def _execute(self):
     """Util function that helps builing Application.request method."""
     # If template cache is disabled (usually in the debug mode),
     # re-compile templates and reload static files on every
@@ -44,8 +45,8 @@ def _execute(self):
     # except handler, and we cannot easily access the IOLoop here to
     # call add_future (because of the requirement to remain compatible
     # with WSGI)
-    self.handler._execute(transforms, *self.path_args,
-                          **self.path_kwargs)
+    await self.handler._execute(transforms, *self.path_args,
+                                **self.path_kwargs)
     # If we are streaming the request body, then execute() is finished
     # when the handler has prepared to receive the body.  If not,
     # it doesn't matter when execute() finishes (so we return None)
@@ -170,7 +171,7 @@ class Application(web.Application):
         # Build the corresponding _HandlerDelegate.
         handler = self.find_handler(http_request)
 
-        return _execute(handler)
+        return asyncio.run(_execute(handler))
 
     def get(self, uri, **kwargs):
         """Performs a GET request over the application, without going through the network.
