@@ -171,7 +171,10 @@ class Application(web.Application):
         # Build the corresponding _HandlerDelegate.
         handler = self.find_handler(http_request)
 
-        return asyncio.run(_execute(handler))
+        loop = asyncio.get_event_loop()
+        out = loop.run_until_complete(_execute(handler))
+        return out
+
 
     def get(self, uri, **kwargs):
         """Performs a GET request over the application, without going through the network.
