@@ -111,6 +111,11 @@ class Heartbeat(web.RequestHandler):
     }
 
     async def post(self):
+        if 'host_url' in self.application.config:
+            url = self.application.config['url']
+        else:
+            url = 'http://{}:{}'.format(self.application.get_host(),
+                                        self.application.get_port())
         request = httpclient.HTTPRequest(
             '{}/register/{}'.format(
                 self.application.config['registry']['url'].rstrip('/'),
@@ -118,8 +123,7 @@ class Heartbeat(web.RequestHandler):
                 ),
             method='POST',
             body=json.dumps({
-                'url': 'http://{}:{}'.format(self.application.get_host(),
-                                             self.application.get_port()),
+                'url': url,
                 'config': self.application.config,
                 }),
             )
