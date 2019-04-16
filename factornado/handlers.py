@@ -112,7 +112,7 @@ class Heartbeat(web.RequestHandler):
 
     async def post(self):
         if 'host_url' in self.application.config:
-            url = self.application.config['url']
+            url = self.application.config['host_url']
         else:
             url = 'http://{}:{}'.format(self.application.get_host(),
                                         self.application.get_port())

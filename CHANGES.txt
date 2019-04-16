@@ -1,4 +1,4 @@
-0.10.0
+0.10.1
 ~~~
 - Allow to override register url with host_url in the configuration file
 
