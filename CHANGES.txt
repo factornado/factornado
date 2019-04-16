@@ -1,4 +1,8 @@
-0.10
+0.10.0
+~~~
+- Allow to override register url with host_url in the configuration file
+
+0.10.0
 ~~~
 - Swagger is now in openapi 3.0.0
 
