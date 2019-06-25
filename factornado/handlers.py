@@ -381,9 +381,9 @@ class Swagger(web.RequestHandler):
             ("info", {
                 "title": self.application.config['name'],
                 "version": (
-                    self.application.config['tag']
-                    if 'tag' in self.application.config
-                    else 'v1.0'
+                    'v1.0'
+                    if 'tag' not in self.application.config
+                    else self.application.config['tag']
                 ),
             }),
             ("servers", [{
@@ -405,6 +405,23 @@ class Swagger(web.RequestHandler):
                 )
                 sw['paths'][final_path] = handler.swagger[path]
 
+        # Security context in swagger
+        if 'sso' in self.application.config:
+            sso = self.application.config['sso']
+            sw['components']['securitySchemes'] = {
+                "oauth": {
+                    "type": "oauth2",
+                    "description": "This API uses OAuth 2 with the password grant flow",
+                    "flows": {
+                        "password": {
+                            "tokenUrl": "{}realms/{}/protocol/openid-connect/token".format(
+                                sso['url'],
+                                sso['realm']
+                            )
+                        }
+                    }
+                }
+            }
         # This object is usefull to declare generic types,
         # service response representation...
         # https://swagger.io/docs/specification/components/

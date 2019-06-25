@@ -1,8 +1,9 @@
-0.12.0
+0.12
 ~~~
 - Bearer standardization
 
-0.11.0
+0.11
+=======
 ~~~
 - Allow to override register url with host_url in the configuration file
 
