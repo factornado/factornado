@@ -137,7 +137,7 @@ def _check_auth(handler, kwargs):
     header = handler.request.headers.get('Authorization')
     sso = handler.application.config['sso']
 
-    if header is None or not header.startswith('bearer ') or not sso:
+    if header is None or not header.lower().startswith('bearer ') or not sso:
         return _unauthorized(401, handler)
 
     # Retrieve JWK from server
